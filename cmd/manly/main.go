@@ -122,16 +122,6 @@ func normalizeFlagArgs(args []string, valueFlags map[string]bool) []string {
 	return append(flags, positional...)
 }
 
-func parseFormat(value string) (outputFormat, error) {
-	format := outputFormat(strings.ToLower(strings.TrimSpace(value)))
-	switch format {
-	case formatHuman, formatCompact, formatJSON, formatMarkdown:
-		return format, nil
-	default:
-		return "", fmt.Errorf("unsupported format %q; use human, compact, json, or markdown", value)
-	}
-}
-
 func runInit(root string, args []string) error {
 	flags := newFlagSet("init")
 	force := flags.Bool("force", false, "allow creation of an existing root index")
@@ -211,7 +201,7 @@ Commands:
   check      Validate the bundle
 
 Output formats:
-  human, compact, json, markdown
+  compact, fancy, json, markdown
 
 The root defaults to $MANLY_ROOT or ~/.okf.
 `)

@@ -87,7 +87,7 @@ func runIndex(root string, args []string) error {
 func runCheck(root string, args []string) error {
 	flags := newFlagSet("check")
 	strict := flags.Bool("strict", false, "enable advisory checks")
-	formatValue := flags.String("format", string(formatHuman), "output format")
+	formatValue := flags.String("format", string(formatCompact), "output format")
 	if err := flags.Parse(normalizeFlagArgs(args, map[string]bool{"--strict": false, "--format": true})); err != nil {
 		return err
 	}
@@ -102,25 +102,12 @@ func runCheck(root string, args []string) error {
 	if err != nil {
 		return err
 	}
-	if format == formatJSON {
-		if err := writeJSON(report); err != nil {
-			return err
-		}
-		if !report.Valid() {
-			return errors.New("validation failed")
-		}
-		return nil
-	}
-	for _, issue := range report.Errors {
-		fmt.Printf("ERROR: %s: %s\n", issue.Path, issue.Message)
-	}
-	for _, issue := range report.Warnings {
-		fmt.Printf("WARNING: %s: %s\n", issue.Path, issue.Message)
+	if err := renderCheck(report, format); err != nil {
+		return err
 	}
 	if !report.Valid() {
 		return fmt.Errorf("validation failed: %d error(s), %d warning(s)", len(report.Errors), len(report.Warnings))
 	}
-	fmt.Printf("OKF validation passed: %d warning(s)\n", len(report.Warnings))
 	return nil
 }
 

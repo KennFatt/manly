@@ -377,8 +377,8 @@ manly check --format json
 Commands that return concepts support these formats:
 
 ```text
-human    Rich output with navigation actions
-compact  Minimal line-oriented output
+compact  Minimal line-oriented output (default)
+fancy    Rich output with navigation actions
 json     Structured concepts, links, and actions
 markdown Markdown suitable for another document
 ```

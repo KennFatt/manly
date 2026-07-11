@@ -30,7 +30,7 @@ func TestCLIWorkflow(t *testing.T) {
 	assertCommandContains(t, root, []string{"list", "--recursive", "--format", "json"}, `"recursive": true`, `"/group/b"`)
 	assertCommandContains(t, root, []string{"list", "/group", "--format", "markdown"}, "# Group", "/group/b.md")
 
-	for _, format := range []string{"human", "json", "compact", "markdown"} {
+	for _, format := range []string{"fancy", "json", "compact", "markdown"} {
 		assertCommandSucceeds(t, root, []string{"show", "/a", "--format", format})
 		assertCommandSucceeds(t, root, []string{"search", "external data", "--format", format})
 		assertCommandSucceeds(t, root, []string{"context", "/a", "--format", format})
@@ -67,6 +67,9 @@ func TestCLIArgumentValidation(t *testing.T) {
 	}
 	if _, err := parseFormat("invalid"); err == nil {
 		t.Fatal("parseFormat accepted an invalid format")
+	}
+	if _, err := parseFormat("human"); err == nil || !strings.Contains(err.Error(), "compact, fancy, json, markdown") {
+		t.Fatalf("parseFormat accepted removed format or omitted available formats: %v", err)
 	}
 	if _, _, err := parseGlobalArgs([]string{"--root"}); err == nil {
 		t.Fatal("parseGlobalArgs accepted a missing root value")

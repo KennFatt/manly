@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -13,7 +14,7 @@ import (
 func runList(root string, args []string) error {
 	flags := newFlagSet("list")
 	recursive := flags.Bool("recursive", false, "include nested concepts")
-	formatValue := flags.String("format", string(formatHuman), "output format")
+	formatValue := flags.String("format", string(formatCompact), "output format")
 	if err := flags.Parse(normalizeFlagArgs(args, map[string]bool{"--recursive": false, "--format": true})); err != nil {
 		return err
 	}
@@ -40,7 +41,7 @@ func runList(root string, args []string) error {
 	directories := childDirectories(bundle, prefix)
 	if *recursive {
 		if format == formatJSON {
-			return renderDirectoryJSON(prefix, directories, concepts, true)
+			return renderJSONRecursiveDirectory(os.Stdout, prefix, directories, concepts)
 		}
 		return renderConceptList(bundle, concepts, format, bundleDirectoryTitle(bundle, prefix))
 	}
@@ -49,7 +50,7 @@ func runList(root string, args []string) error {
 
 func runShow(root string, args []string) error {
 	flags := newFlagSet("show")
-	formatValue := flags.String("format", string(formatHuman), "output format")
+	formatValue := flags.String("format", string(formatCompact), "output format")
 	if err := flags.Parse(normalizeFlagArgs(args, map[string]bool{"--format": true})); err != nil {
 		return err
 	}
@@ -68,9 +69,8 @@ func runShow(root string, args []string) error {
 	if err != nil {
 		return err
 	}
-	links := concept.Links
-	outgoing := make([]linkView, 0, len(links))
-	for _, link := range links {
+	outgoing := make([]linkView, 0, len(concept.Links))
+	for _, link := range concept.Links {
 		if link.External || link.TargetID != "" || link.TargetPath != "" || link.Broken {
 			outgoing = append(outgoing, renderLink(link))
 		}
@@ -79,54 +79,7 @@ func runShow(root string, args []string) error {
 	if err != nil {
 		return err
 	}
-	switch format {
-	case formatJSON:
-		backlinkViews := make([]linkView, 0, len(backlinks))
-		for _, backlink := range backlinks {
-			backlinkViews = append(backlinkViews, linkView{Label: backlink.Link.Label, Target: backlink.Concept.ID, TargetPath: backlink.Concept.RelPath})
-		}
-		return writeJSON(map[string]any{
-			"concept":   viewConcept(concept, true),
-			"links":     outgoing,
-			"backlinks": backlinkViews,
-			"actions":   actionViews(concept.ID),
-		})
-	case formatCompact:
-		fmt.Printf("%s\n%s\n", concept.ID, strings.TrimSpace(concept.Body))
-		return nil
-	case formatMarkdown:
-		fmt.Printf("# %s\n\n%s\n", conceptTitle(concept), strings.TrimSpace(concept.Body))
-		return nil
-	default:
-		fmt.Printf("%s\n\n", strings.TrimSpace(concept.Body))
-		if len(outgoing) > 0 {
-			fmt.Println("Links:")
-			for index, link := range outgoing {
-				if link.Target != "" {
-					fmt.Printf("[%d] %s\n    %s\n    manly show %s\n\n", index+1, link.Label, link.Target, link.Target)
-				} else if command := linkNavigationCommand(link); command != "" {
-					fmt.Printf("[%d] %s\n    %s\n    %s\n\n", index+1, link.Label, link.TargetPath, command)
-				} else if link.URL != "" {
-					fmt.Printf("[%d] %s\n    %s\n\n", index+1, link.Label, link.URL)
-				} else {
-					fmt.Printf("[%d] %s\n    broken: %s\n\n", index+1, link.Label, link.URL)
-				}
-			}
-		}
-		if len(backlinks) > 0 {
-			fmt.Println("Backlinks:")
-			for _, backlink := range backlinks {
-				fmt.Printf("  %s (%s)\n", backlink.Concept.ID, backlink.Link.Label)
-			}
-			fmt.Println()
-		}
-		fmt.Println("Actions:")
-		renderAction("Open", "manly show "+concept.ID)
-		renderAction("Context", "manly context "+concept.ID)
-		renderAction("Edit", "manly edit "+concept.ID)
-		renderAction("Backlinks", "manly backlinks "+concept.ID)
-		return nil
-	}
+	return renderShow(os.Stdout, concept, outgoing, backlinks, format)
 }
 
 func directoryPrefix(value string) (string, error) {
@@ -193,52 +146,6 @@ func childDirectories(bundle *knowledge.Bundle, prefix string) []string {
 	}
 	sort.Strings(result)
 	return result
-}
-
-func renderDirectoryContents(bundle *knowledge.Bundle, prefix string, directories []string, concepts []*knowledge.Concept, format outputFormat) error {
-	switch format {
-	case formatJSON:
-		return renderDirectoryJSON(prefix, directories, concepts, false)
-	case formatMarkdown:
-		fmt.Printf("# %s\n\n", bundleDirectoryTitle(bundle, prefix))
-		for _, directory := range directories {
-			fmt.Printf("* [%s](%s/)\n", filepath.Base(directory), directory)
-		}
-		for _, concept := range concepts {
-			fmt.Printf("* [%s](%s.md) - %s\n", conceptTitle(concept), concept.ID, conceptDescription(concept))
-		}
-	default:
-		fmt.Printf("%s\n\n", bundleDirectoryTitle(bundle, prefix))
-		for _, directory := range directories {
-			fmt.Printf("  %-24s %d concepts\n", directory, countConceptsUnder(bundle, strings.TrimPrefix(directory, "/")))
-		}
-		for _, concept := range concepts {
-			fmt.Printf("  %s\n", concept.ID)
-			if description := conceptDescription(concept); description != "" {
-				fmt.Printf("      %s\n", description)
-			}
-			fmt.Printf("      Open: manly show %s\n", concept.ID)
-		}
-		fmt.Printf("\n%d concept(s)\n", countConceptsUnder(bundle, prefix))
-	}
-	return nil
-}
-
-func renderDirectoryJSON(prefix string, directories []string, concepts []*knowledge.Concept, recursive bool) error {
-	type entryView struct {
-		Concept conceptView  `json:"concept"`
-		Actions []actionView `json:"actions"`
-	}
-	entries := make([]entryView, 0, len(concepts))
-	for _, concept := range concepts {
-		entries = append(entries, entryView{Concept: viewConcept(concept, false), Actions: actionViews(concept.ID)})
-	}
-	return writeJSON(map[string]any{
-		"path":        directoryDisplay(prefix),
-		"recursive":   recursive,
-		"directories": directories,
-		"entries":     entries,
-	})
 }
 
 func countConceptsUnder(bundle *knowledge.Bundle, prefix string) int {
