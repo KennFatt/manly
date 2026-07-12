@@ -37,7 +37,7 @@ func runList(root string, args []string) error {
 	if err != nil {
 		return err
 	}
-	concepts := conceptsInDirectory(bundle, prefix, *recursive)
+	concepts := bundle.ConceptsUnder(prefix, *recursive)
 	directories := childDirectories(bundle, prefix)
 	if *recursive {
 		if format == formatJSON {
@@ -54,8 +54,8 @@ func runShow(root string, args []string) error {
 	if err := flags.Parse(normalizeFlagArgs(args, map[string]bool{"--format": true})); err != nil {
 		return err
 	}
-	if flags.NArg() != 1 {
-		return errors.New("usage: manly show <concept-id> [--format FORMAT]")
+	if flags.NArg() < 1 {
+		return errors.New("usage: manly show <concept-id-or-directory>... [--format FORMAT]")
 	}
 	format, err := parseFormat(*formatValue)
 	if err != nil {
@@ -65,21 +65,53 @@ func runShow(root string, args []string) error {
 	if err != nil {
 		return err
 	}
-	concept, err := bundle.Get(flags.Arg(0))
+	concepts, collection, err := resolveShowConcepts(bundle, flags.Args())
 	if err != nil {
 		return err
 	}
-	outgoing := make([]linkView, 0, len(concept.Links))
-	for _, link := range concept.Links {
-		if link.External || link.TargetID != "" || link.TargetPath != "" || link.Broken {
-			outgoing = append(outgoing, renderLink(link))
-		}
+	if collection {
+		return renderShowCollection(os.Stdout, bundle, concepts, format)
 	}
+
+	concept := concepts[0]
 	backlinks, err := bundle.Backlinks(concept.ID)
 	if err != nil {
 		return err
 	}
-	return renderShow(os.Stdout, concept, outgoing, backlinks, format)
+	return renderShow(os.Stdout, concept, linkViews(concept.Links), backlinks, format)
+}
+
+func resolveShowConcepts(bundle *knowledge.Bundle, arguments []string) ([]*knowledge.Concept, bool, error) {
+	collection := len(arguments) > 1
+	selected := make([]*knowledge.Concept, 0, len(arguments))
+	seen := make(map[string]bool)
+	for _, argument := range arguments {
+		if concept, err := bundle.Get(argument); err == nil {
+			if !seen[concept.ID] {
+				selected = append(selected, concept)
+				seen[concept.ID] = true
+			}
+			continue
+		}
+
+		prefix, err := directoryPrefix(argument)
+		if err != nil {
+			return nil, false, err
+		}
+		concepts := bundle.ConceptsUnder(prefix, true)
+		if len(concepts) == 0 {
+			return nil, false, fmt.Errorf("concept or directory not found: %s", argument)
+		}
+		collection = true
+		for _, concept := range concepts {
+			if seen[concept.ID] {
+				continue
+			}
+			selected = append(selected, concept)
+			seen[concept.ID] = true
+		}
+	}
+	return selected, collection, nil
 }
 
 func directoryPrefix(value string) (string, error) {
@@ -93,25 +125,6 @@ func directoryPrefix(value string) (string, error) {
 		return "", fmt.Errorf("invalid directory path: %q", value)
 	}
 	return clean, nil
-}
-
-func conceptsInDirectory(bundle *knowledge.Bundle, prefix string, recursive bool) []*knowledge.Concept {
-	var concepts []*knowledge.Concept
-	for _, concept := range bundle.Concepts {
-		directory := filepath.ToSlash(filepath.Dir(concept.RelPath))
-		if directory == "." {
-			directory = ""
-		}
-		if recursive {
-			if prefix == "" || directory == prefix || strings.HasPrefix(directory, prefix+"/") {
-				concepts = append(concepts, concept)
-			}
-		} else if directory == prefix {
-			concepts = append(concepts, concept)
-		}
-	}
-	sort.Slice(concepts, func(i, j int) bool { return concepts[i].ID < concepts[j].ID })
-	return concepts
 }
 
 func childDirectories(bundle *knowledge.Bundle, prefix string) []string {

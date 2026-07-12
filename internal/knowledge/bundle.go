@@ -128,6 +128,26 @@ func (b *Bundle) Get(id string) (*Concept, error) {
 	return concept, nil
 }
 
+// ConceptsUnder returns concepts in a directory, optionally including nested directories.
+func (b *Bundle) ConceptsUnder(prefix string, recursive bool) []*Concept {
+	concepts := make([]*Concept, 0)
+	for _, concept := range b.Concepts {
+		directory := filepath.ToSlash(filepath.Dir(concept.RelPath))
+		if directory == "." {
+			directory = ""
+		}
+		if recursive {
+			if prefix == "" || directory == prefix || strings.HasPrefix(directory, prefix+"/") {
+				concepts = append(concepts, concept)
+			}
+		} else if directory == prefix {
+			concepts = append(concepts, concept)
+		}
+	}
+	sort.Slice(concepts, func(i, j int) bool { return concepts[i].ID < concepts[j].ID })
+	return concepts
+}
+
 func CanonicalID(value string) (string, error) {
 	value = strings.TrimSpace(strings.ReplaceAll(value, "\\", "/"))
 	value = strings.TrimPrefix(value, "/")

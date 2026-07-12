@@ -18,6 +18,8 @@ func (jsonRenderer) Render(w io.Writer, view View) error {
 		return renderJSONList(w, value)
 	case ShowView:
 		return writeJSON(w, value)
+	case ShowCollectionView:
+		return writeJSON(w, value)
 	case SearchView:
 		return writeJSON(w, value)
 	case ContextView:

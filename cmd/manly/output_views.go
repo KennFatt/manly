@@ -86,6 +86,27 @@ func renderShow(w io.Writer, concept *knowledge.Concept, outgoing []linkView, ba
 	return renderOutput(w, format, view)
 }
 
+func renderShowCollection(w io.Writer, bundle *knowledge.Bundle, concepts []*knowledge.Concept, format outputFormat) error {
+	results := make([]renderer.ShowResult, 0, len(concepts))
+	for _, concept := range concepts {
+		backlinks, err := bundle.Backlinks(concept.ID)
+		if err != nil {
+			return err
+		}
+		backlinkViews := make([]linkView, 0, len(backlinks))
+		for _, backlink := range backlinks {
+			backlinkViews = append(backlinkViews, backlinkView(backlink))
+		}
+		results = append(results, renderer.ShowResult{
+			Concept:   viewConcept(concept, true),
+			Links:     linkViews(concept.Links),
+			Backlinks: backlinkViews,
+			Actions:   actionViews(concept.ID),
+		})
+	}
+	return renderOutput(w, format, renderer.ShowCollectionView{Results: results})
+}
+
 func renderSearchResults(w io.Writer, results []knowledge.SearchResult, query string, format outputFormat) error {
 	view := renderer.SearchView{Query: query, Results: searchResults(results)}
 	return renderOutput(w, format, view)

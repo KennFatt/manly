@@ -20,6 +20,8 @@ func (fancyRenderer) Render(w io.Writer, view View) error {
 		return renderFancyList(w, value)
 	case ShowView:
 		return renderFancyShow(w, value)
+	case ShowCollectionView:
+		return renderFancyShowCollection(w, value)
 	case SearchView:
 		return renderFancySearch(w, value)
 	case ContextView:
@@ -61,6 +63,23 @@ func renderFancyList(w io.Writer, view ListView) error {
 	}
 	if view.Root != "" {
 		fmt.Fprintf(w, "Root: %s\n", view.Root)
+	}
+	return nil
+}
+
+func renderFancyShowCollection(w io.Writer, view ShowCollectionView) error {
+	for index, result := range view.Results {
+		if index > 0 {
+			fmt.Fprintln(w)
+		}
+		if err := renderFancyShow(w, ShowView{
+			Concept:   result.Concept,
+			Links:     result.Links,
+			Backlinks: result.Backlinks,
+			Actions:   result.Actions,
+		}); err != nil {
+			return err
+		}
 	}
 	return nil
 }

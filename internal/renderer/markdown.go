@@ -21,6 +21,8 @@ func (markdownRenderer) Render(w io.Writer, view View) error {
 		return renderMarkdownList(w, value)
 	case ShowView:
 		return renderMarkdownShow(w, value)
+	case ShowCollectionView:
+		return renderMarkdownShowCollection(w, value)
 	case SearchView:
 		return renderMarkdownSearch(w, value)
 	case ContextView:
@@ -57,6 +59,18 @@ func renderMarkdownList(w io.Writer, view ListView) error {
 
 func renderMarkdownShow(w io.Writer, view ShowView) error {
 	fmt.Fprintf(w, "# %s\n\n%s\n", view.Concept.Title, strings.TrimSpace(view.Concept.Content))
+	return nil
+}
+
+func renderMarkdownShowCollection(w io.Writer, view ShowCollectionView) error {
+	for index, result := range view.Results {
+		if index > 0 {
+			fmt.Fprintln(w)
+		}
+		if err := renderMarkdownShow(w, ShowView{Concept: result.Concept}); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

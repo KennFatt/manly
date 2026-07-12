@@ -98,6 +98,7 @@ return outputRenderer.Render(os.Stdout, view)
 
 - `ListView`
 - `ShowView`
+- `ShowCollectionView`
 - `SearchView`
 - `ContextView`
 - `LinksView`

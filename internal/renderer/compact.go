@@ -21,6 +21,8 @@ func (compactRenderer) Render(w io.Writer, view View) error {
 		return renderCompactList(w, value)
 	case ShowView:
 		return renderCompactShow(w, value)
+	case ShowCollectionView:
+		return renderCompactShowCollection(w, value)
 	case SearchView:
 		return renderCompactSearch(w, value)
 	case ContextView:
@@ -91,6 +93,16 @@ func compactListKeyWidth(rows []compactListRow) int {
 
 func renderCompactShow(w io.Writer, view ShowView) error {
 	fmt.Fprintf(w, "%s\n%s\n", view.Concept.ID, strings.TrimSpace(view.Concept.Content))
+	return nil
+}
+
+func renderCompactShowCollection(w io.Writer, view ShowCollectionView) error {
+	for index, result := range view.Results {
+		if index > 0 {
+			fmt.Fprintln(w)
+		}
+		fmt.Fprintf(w, "%s\n%s\n", result.Concept.ID, strings.TrimSpace(result.Concept.Content))
+	}
 	return nil
 }
 

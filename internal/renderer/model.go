@@ -70,6 +70,21 @@ type ShowView struct {
 
 func (ShowView) view() {}
 
+// ShowResult contains one concept and its relationships in a collection.
+type ShowResult struct {
+	Concept   Concept  `json:"concept"`
+	Links     []Link   `json:"links"`
+	Backlinks []Link   `json:"backlinks"`
+	Actions   []Action `json:"actions"`
+}
+
+// ShowCollectionView contains multiple complete concepts and their relationships.
+type ShowCollectionView struct {
+	Results []ShowResult `json:"results"`
+}
+
+func (ShowCollectionView) view() {}
+
 // SearchResult contains one scored search result.
 type SearchResult struct {
 	Concept Concept  `json:"concept"`
