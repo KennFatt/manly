@@ -67,7 +67,11 @@ func renderCompactList(w io.Writer, view ListView) error {
 		fmt.Fprintf(w, "%-*s  %s\n", keyWidth, row.Key, row.Value)
 	}
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Details: manly show <ID>")
+	if view.Recursive {
+		fmt.Fprintln(w, "Details: manly show <ID>")
+	} else {
+		fmt.Fprintln(w, "List: manly list <PATH>")
+	}
 	return nil
 }
 
