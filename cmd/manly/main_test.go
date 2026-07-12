@@ -21,6 +21,7 @@ func TestCLIWorkflow(t *testing.T) {
 	}
 	writeCLIFile(t, root, "a.md", "---\ntype: Guideline\ntitle: Boundary Rules\ntags: [go, safety]\n---\n\nExternal data. See [B](group/b.md), [Web](https://example.com), and [Missing](missing.md).\n")
 	writeCLIFile(t, root, "group/b.md", "---\ntype: Note\ntitle: B\n---\n\nLinked body.\n")
+	writeCLIFile(t, root, "group/nested/c.md", "---\ntype: Note\ntitle: C\n---\n\nNested body.\n")
 	writeCLIFile(t, root, "index.md", "---\nokf_version: \"0.1\"\n---\n\n<!-- manly:generated:start -->\nold\n<!-- manly:generated:end -->\n")
 	writeCLIFile(t, root, "group/index.md", "<!-- manly:generated:start -->\n<!-- manly:generated:end -->\n")
 
@@ -29,8 +30,13 @@ func TestCLIWorkflow(t *testing.T) {
 	assertCommandContains(t, root, []string{"list", "--recursive", "--format", "markdown"}, "# Knowledge Bundle", "/group/b.md")
 	assertCommandContains(t, root, []string{"list", "--recursive", "--format", "json"}, `"recursive": true`, `"/group/b"`)
 	assertCommandContains(t, root, []string{"list", "/group", "--format", "markdown"}, "# Group", "/group/b.md")
+	assertCommandContains(t, root, []string{"show", "/group", "--format", "compact"}, "/group/b", "/group/nested/c")
+	assertCommandContains(t, root, []string{"show", "/a", "/group/nested/c", "--format", "json"}, `"results"`, `"/a"`, `"/group/nested/c"`)
+	for _, format := range []string{"fancy", "json", "compact", "markdown"} {
+		assertCommandSucceeds(t, root, []string{"show", "/group", "--format", format})
+	}
 
-	for _, format := range []string{"human", "json", "compact", "markdown"} {
+	for _, format := range []string{"fancy", "json", "compact", "markdown"} {
 		assertCommandSucceeds(t, root, []string{"show", "/a", "--format", format})
 		assertCommandSucceeds(t, root, []string{"search", "external data", "--format", format})
 		assertCommandSucceeds(t, root, []string{"context", "/a", "--format", format})
@@ -67,6 +73,9 @@ func TestCLIArgumentValidation(t *testing.T) {
 	}
 	if _, err := parseFormat("invalid"); err == nil {
 		t.Fatal("parseFormat accepted an invalid format")
+	}
+	if _, err := parseFormat("human"); err == nil || !strings.Contains(err.Error(), "compact, fancy, json, markdown") {
+		t.Fatalf("parseFormat accepted removed format or omitted available formats: %v", err)
 	}
 	if _, _, err := parseGlobalArgs([]string{"--root"}); err == nil {
 		t.Fatal("parseGlobalArgs accepted a missing root value")
