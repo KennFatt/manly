@@ -49,6 +49,9 @@ func renderMarkdownList(w io.Writer, view ListView) error {
 		concept := entry.Concept
 		fmt.Fprintf(w, "* [%s](%s.md) - %s\n", concept.Title, concept.ID, concept.Description)
 	}
+	if view.Root != "" {
+		fmt.Fprintf(w, "\n**Root:** %s\n", view.Root)
+	}
 	return nil
 }
 

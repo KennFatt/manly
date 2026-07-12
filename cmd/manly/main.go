@@ -25,7 +25,7 @@ func run(args []string) error {
 		return err
 	}
 	if len(commandArgs) == 0 || commandArgs[0] == "help" || commandArgs[0] == "--help" || commandArgs[0] == "-h" {
-		printUsage()
+		printUsage(root)
 		return nil
 	}
 
@@ -179,30 +179,26 @@ func runEdit(root string, args []string) error {
 	return command.Run()
 }
 
-func printUsage() {
-	fmt.Print(`manly: navigate a global OKF knowledge bundle
-
-Usage:
-  manly [--root PATH] <command> [options]
-
-Commands:
-  init       Initialize an OKF bundle
-  list       List directories or concepts
-  show       Show one concept
-  search     Search concepts
-  context    Retrieve bounded agent context
-  links      Show outgoing links
-  backlinks  Show incoming links
-  graph      Traverse linked concepts
-  add        Create a concept
-  edit       Open a concept in $EDITOR
-  move       Move a concept and update links
-  index      Update marked generated index sections
-  check      Validate the bundle
-
-Output formats:
-  compact, fancy, json, markdown
-
-The root defaults to $MANLY_ROOT or ~/.okf.
-`)
+func printUsage(root string) {
+	fmt.Printf("manly: navigate a global OKF knowledge bundle\n\n"+
+		"Usage:\n"+
+		"  manly [--root PATH] <command> [options]\n\n"+
+		"Root: %s\n\n"+
+		"Commands:\n"+
+		"  init       Initialize an OKF bundle\n"+
+		"  list       List directories or concepts\n"+
+		"  show       Show one concept\n"+
+		"  search     Search concepts\n"+
+		"  context    Retrieve bounded agent context\n"+
+		"  links      Show outgoing links\n"+
+		"  backlinks  Show incoming links\n"+
+		"  graph      Traverse linked concepts\n"+
+		"  add        Create a concept\n"+
+		"  edit       Open a concept in $EDITOR\n"+
+		"  move       Move a concept and update links\n"+
+		"  index      Update marked generated index sections\n"+
+		"  check      Validate the bundle\n\n"+
+		"Output formats:\n"+
+		"  compact, fancy, json, markdown\n",
+		root)
 }

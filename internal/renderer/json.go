@@ -41,6 +41,7 @@ func renderJSONList(w io.Writer, view ListView) error {
 		directories = append(directories, directory.Path)
 	}
 	return writeJSON(w, map[string]any{
+		"root":        view.Root,
 		"path":        view.Path,
 		"recursive":   view.Recursive,
 		"directories": directories,

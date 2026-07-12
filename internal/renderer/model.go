@@ -49,6 +49,7 @@ type ListEntry struct {
 
 // ListView contains directory listing data.
 type ListView struct {
+	Root        string      `json:"root"`
 	Path        string      `json:"path"`
 	Heading     string      `json:"heading,omitempty"`
 	Recursive   bool        `json:"recursive"`

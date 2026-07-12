@@ -41,11 +41,11 @@ func runList(root string, args []string) error {
 	directories := childDirectories(bundle, prefix)
 	if *recursive {
 		if format == formatJSON {
-			return renderJSONRecursiveDirectory(os.Stdout, prefix, directories, concepts)
+			return renderJSONRecursiveDirectory(os.Stdout, root, prefix, directories, concepts)
 		}
-		return renderConceptList(bundle, concepts, format, bundleDirectoryTitle(bundle, prefix))
+		return renderConceptList(root, bundle, concepts, format, bundleDirectoryTitle(bundle, prefix))
 	}
-	return renderDirectoryContents(bundle, prefix, directories, concepts, format)
+	return renderDirectoryContents(root, bundle, prefix, directories, concepts, format)
 }
 
 func runShow(root string, args []string) error {

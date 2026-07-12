@@ -72,6 +72,9 @@ func renderCompactList(w io.Writer, view ListView) error {
 	} else {
 		fmt.Fprintln(w, "List: manly list <PATH>")
 	}
+	if view.Root != "" {
+		fmt.Fprintf(w, "Root: %s\n", view.Root)
+	}
 	return nil
 }
 

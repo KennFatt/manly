@@ -8,8 +8,9 @@ import (
 	"github.com/KennFatt/manly/internal/renderer"
 )
 
-func renderConceptList(bundle *knowledge.Bundle, concepts []*knowledge.Concept, format outputFormat, heading string) error {
+func renderConceptList(root string, bundle *knowledge.Bundle, concepts []*knowledge.Concept, format outputFormat, heading string) error {
 	view := renderer.ListView{
+		Root:      root,
 		Path:      heading,
 		Heading:   heading,
 		Recursive: true,
@@ -18,8 +19,9 @@ func renderConceptList(bundle *knowledge.Bundle, concepts []*knowledge.Concept, 
 	return renderOutput(os.Stdout, format, view)
 }
 
-func renderJSONRecursiveDirectory(w io.Writer, prefix string, directories []string, concepts []*knowledge.Concept) error {
+func renderJSONRecursiveDirectory(w io.Writer, root string, prefix string, directories []string, concepts []*knowledge.Concept) error {
 	view := renderer.ListView{
+		Root:        root,
 		Path:        directoryDisplay(prefix),
 		Recursive:   true,
 		Directories: directoryEntries(directories, nil),
@@ -28,8 +30,9 @@ func renderJSONRecursiveDirectory(w io.Writer, prefix string, directories []stri
 	return renderOutput(w, formatJSON, view)
 }
 
-func renderDirectoryContents(bundle *knowledge.Bundle, prefix string, directories []string, concepts []*knowledge.Concept, format outputFormat) error {
+func renderDirectoryContents(root string, bundle *knowledge.Bundle, prefix string, directories []string, concepts []*knowledge.Concept, format outputFormat) error {
 	view := renderer.ListView{
+		Root:        root,
 		Path:        directoryDisplay(prefix),
 		Heading:     bundleDirectoryTitle(bundle, prefix),
 		Directories: directoryEntries(directories, bundle),

@@ -59,6 +59,9 @@ func renderFancyList(w io.Writer, view ListView) error {
 	if !view.Recursive {
 		fmt.Fprintf(w, "\n%d concept(s)\n", view.Count)
 	}
+	if view.Root != "" {
+		fmt.Fprintf(w, "Root: %s\n", view.Root)
+	}
 	return nil
 }
 
