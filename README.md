@@ -155,269 +155,31 @@ The file is the source of truth. `manly` derives search indexes and graph relati
 
 ## Specification
 
-`manly` uses the [Open Knowledge Format (OKF) v0.1 specification](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) as its bundle-format reference. The draft specification defines Markdown documents with YAML frontmatter, concept IDs, reserved `index.md` and `log.md` files, Markdown links, and permissive validation. Consult it when changing bundle structure or compatibility behavior.
+`manly` uses the [Open Knowledge Format (OKF) v0.1](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md). Concepts are Markdown files with YAML frontmatter, identified by root-relative path without `.md`. Links use standard Markdown syntax.
 
 ## Commands
 
-### `init`
-
-Create the root directory and its initial `index.md`:
-
-```bash
-manly init
-```
-
-Use `--force` only when intentionally replacing an existing root index.
-
-### `list`
-
-Browse what exists without reading full documents:
-
-```bash
-manly list
-manly list /programming
-manly list /programming --recursive
-```
-
-Human output includes concept descriptions and commands for opening each concept:
-
-```text
-Programming
-
-  /programming/debugging
-      A repeatable process for investigating failures.
-      Open: manly show /programming/debugging
-```
-
-Use JSON for scripts and agents:
-
-```bash
-manly list /programming --format json
-```
-
-### `show`
-
-Read one complete concept:
-
-```bash
-manly show /programming/debugging
-```
-
-The output includes links, backlinks, and next actions:
-
-```text
-Actions:
-  Open:     manly show /programming/debugging
-  Context:  manly context /programming/debugging
-  Edit:     manly edit /programming/debugging
-  Backlinks: manly backlinks /programming/debugging
-```
-
-Use structured output when another tool will consume the result:
-
-```bash
-manly show /programming/debugging --format json
-```
-
-### `search`
-
-Search titles, descriptions, tags, paths, and document bodies:
-
-```bash
-manly search "handling external data"
-```
-
-Filter results by metadata or path:
-
-```bash
-manly search "testing" --tag react
-manly search "deployment" --type Procedure
-manly search "error" --path /engineering
-manly search "database" --limit 5 --format json
-```
-
-### `context`
-
-Retrieve bounded context for an LLM agent or a focused reading session:
-
-```bash
-manly context "How should data from an external API be handled?" --limit 5
-```
-
-Retrieve one known concept as structured JSON:
-
-```bash
-manly context /programming/type-safety --format json
-```
-
-Results include content, metadata, scores, links, and navigation actions. Agents can continue navigating with the returned concept IDs:
-
-```bash
-manly show /concept/id
-manly context /concept/id
-manly links /concept/id
-```
-
-### `links`
-
-Show outgoing links from a concept:
-
-```bash
-manly links /engineering/architecture-decisions
-```
-
-Internal links are rendered with their next CLI action, such as:
-
-```text
-manly show /programming/type-safety
-```
-
-### `backlinks`
-
-Show concepts that link to a target concept:
-
-```bash
-manly backlinks /programming/type-safety
-```
-
-Backlinks help identify related notes and reveal which documents may be affected by a change.
-
-### `graph`
-
-Traverse connected concepts to a bounded depth:
-
-```bash
-manly graph /programming/type-safety --depth 2
-```
-
-The graph is calculated from Markdown links and handles cycles safely. It does not introduce a second relationship database.
-
-### `add`
-
-Create a valid concept with YAML frontmatter:
-
-```bash
-manly add /university/databases/normalization \
-  --type "Study Note" \
-  --title "Database Normalization" \
-  --description "Definitions and examples from database systems." \
-  --tag university,databases
-```
-
-Existing concepts are not overwritten unless `--force` is supplied.
-
-### `edit`
-
-Open a concept using `$EDITOR`:
-
-```bash
-manly edit /university/databases/normalization
-```
-
-### `move`
-
-Move a concept and update known internal Markdown links:
-
-```bash
-manly move /programming/go-notes /programming/go/language-notes
-```
-
-Concept paths act as IDs, so moves should be deliberate and reviewed.
-
-### `index`
-
-Indexes are optional human navigation documents. Search and listing do not depend on them.
-
-Update sections marked for generated content:
-
-```bash
-manly index
-```
-
-Check marked sections without writing files:
-
-```bash
-manly index --check
-```
-
-Manually authored index content is preserved. Index generation currently operates on explicit generated sections.
-
-### `check`
-
-Validate an OKF bundle:
-
-```bash
-manly check
-```
-
-Checks include:
-
-- YAML frontmatter
-- non-empty concept types
-- UTF-8 files
-- reserved OKF files
-- timestamps
-- Markdown links
-- missing local targets
-
-Broken links are reported as warnings, consistent with OKF v0.1. Use strict advisory checks when reviewing generated index sections:
-
-```bash
-manly check --strict
-```
-
-Use JSON for automation:
-
-```bash
-manly check --format json
-```
-
-## Output formats
-
-Commands that return concepts support these formats:
-
-```text
-compact  Minimal line-oriented output (default)
-fancy    Rich output with navigation actions
-json     Structured concepts, links, and actions
-markdown Markdown suitable for another document
-```
-
-Human output is optimized for terminal reading. JSON output is designed for shell scripts, editor integrations, and LLM agents.
-
-## Common workflows
-
-### Study notes
-
-```bash
-manly add /courses/databases/normalization \
-  --type "Study Note" \
-  --title "Database Normalization" \
-  --description "Definitions, examples, and exam questions." \
-  --tag course,databases
-
-manly edit /courses/databases/normalization
-manly search "normal forms" --path /courses
-manly graph /courses/databases/normalization --depth 2
-manly check
-```
-
-### Engineering knowledge
-
-```bash
-manly add /engineering/decisions/queue-choice \
-  --type "Architecture Decision" \
-  --title "Queue Choice" \
-  --description "Why the service uses this queue implementation." \
-  --tag architecture,backend
-
-manly context "How are partial API responses handled?" --format json
-manly backlinks /engineering/decisions/queue-choice
-manly links /engineering/decisions/queue-choice
-manly check
-```
-
-### Agent retrieval
+| Command | Description |
+|---------|-------------|
+| `init` | Initialize an OKF bundle |
+| `list` | List directories or concepts |
+| `show` | Show concepts or recursively load a concept directory |
+| `search` | Search concepts |
+| `context` | Retrieve bounded agent context |
+| `links` | Show outgoing links |
+| `backlinks` | Show incoming links |
+| `graph` | Traverse linked concepts |
+| `add` | Create a concept |
+| `edit` | Open a concept in $EDITOR |
+| `move` | Move a concept and update links |
+| `index` | Update marked generated index sections |
+| `check` | Validate the bundle |
+
+All read commands support `--format compact|fancy|json|markdown` (default: `compact`).
+
+See **[docs/recipe.md](docs/recipe.md)** for complete flag tables, examples, agent workflows, and FAQ.
+
+## Agent retrieval
 
 ```text
 Agent task
