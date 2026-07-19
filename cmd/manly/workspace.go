@@ -119,7 +119,7 @@ func workspaceDirectoryEntries(workspace *knowledge.Workspace, name string, bund
 	for _, directory := range directories {
 		path := directory
 		if name != "" {
-			path = "/" + name + strings.TrimPrefix(directory, "/")
+			path = "/" + name + "/" + strings.TrimPrefix(directory, "/")
 		}
 		entries = append(entries, renderer.Directory{Path: path, Count: countConceptsUnder(bundle, trimDirectoryPrefix(directory))})
 	}
