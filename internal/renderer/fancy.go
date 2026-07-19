@@ -192,8 +192,29 @@ func renderFancyCheck(w io.Writer, view CheckView) error {
 	for _, issue := range view.Warnings {
 		fmt.Fprintf(w, "WARNING: %s: %s\n", issue.Path, issue.Message)
 	}
+	if len(view.Errors) > 0 || len(view.Warnings) > 0 {
+		fmt.Fprintln(w)
+	}
+	fmt.Fprintln(w, "Validation summary")
+	fmt.Fprintf(w, "\nRoot: %s\n", view.Root)
+	fmt.Fprintf(w, "Mode: %s\n", view.Mode)
+	fmt.Fprintln(w, "\nBundles")
+	for _, bundle := range view.Bundles {
+		fmt.Fprintf(w, "  %-28s %d Markdown files, %d concepts, %d loaded, %d invalid\n", bundle.Name, bundle.MarkdownFiles, bundle.ConceptFiles, bundle.LoadedConcepts, bundle.InvalidConceptFiles)
+	}
+	fmt.Fprintln(w, "\nTotals")
+	fmt.Fprintf(w, "  Markdown files:          %d\n", view.Stats.MarkdownFiles)
+	fmt.Fprintf(w, "  Reserved files:          %d\n", view.Stats.ReservedFiles)
+	fmt.Fprintf(w, "  Concept files:           %d\n", view.Stats.ConceptFiles)
+	fmt.Fprintf(w, "  Loaded concepts:         %d\n", view.Stats.LoadedConcepts)
+	fmt.Fprintf(w, "  Invalid concept files:   %d\n", view.Stats.InvalidConceptFiles)
+	fmt.Fprintf(w, "  Links checked:           %d\n", view.Stats.LinksChecked)
+	fmt.Fprintf(w, "  Broken links:            %d\n", view.Stats.BrokenLinks)
+	fmt.Fprintf(w, "  Stale generated indexes: %d\n", view.Stats.StaleGeneratedIndexes)
+	fmt.Fprintf(w, "  Errors:                  %d\n", view.Stats.Errors)
+	fmt.Fprintf(w, "  Warnings:                %d\n", view.Stats.Warnings)
 	if view.Valid {
-		fmt.Fprintf(w, "OKF validation passed: %d warning(s)\n", len(view.Warnings))
+		fmt.Fprintf(w, "\nOKF validation passed: %d warning(s)\n", len(view.Warnings))
 	}
 	return nil
 }

@@ -12,7 +12,7 @@ type appContext struct {
 }
 
 type cli struct {
-	Root string `help:"Knowledge bundle root (overrides MANLY_ROOT)." placeholder:"PATH"`
+	Root string `help:"Knowledge bundle or workspace root (overrides MANLY_ROOT)." placeholder:"PATH"`
 
 	Init      InitCommand      `cmd help:"Initialize an OKF bundle."`
 	List      ListCommand      `cmd help:"List directories or concepts."`
@@ -34,7 +34,7 @@ func newParser(commandLine *cli, exit func(int)) (*kong.Kong, error) {
 	return kong.New(
 		commandLine,
 		kong.Name("manly"),
-		kong.Description("Navigate a global OKF knowledge bundle."),
+		kong.Description("Navigate local OKF knowledge bundles and workspaces."),
 		kong.Writers(os.Stdout, os.Stderr),
 		kong.Exit(exit),
 	)

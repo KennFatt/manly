@@ -15,9 +15,38 @@ type Issue struct {
 	Message string `json:"message"`
 }
 
+type ValidationStats struct {
+	Root                  string
+	Mode                  string
+	Bundles               int
+	MarkdownFiles         int
+	ReservedFiles         int
+	ConceptFiles          int
+	LoadedConcepts        int
+	InvalidConceptFiles   int
+	LinksChecked          int
+	BrokenLinks           int
+	StaleGeneratedIndexes int
+}
+
+type BundleValidationStats struct {
+	Name                  string
+	Root                  string
+	MarkdownFiles         int
+	ReservedFiles         int
+	ConceptFiles          int
+	LoadedConcepts        int
+	InvalidConceptFiles   int
+	LinksChecked          int
+	BrokenLinks           int
+	StaleGeneratedIndexes int
+}
+
 type ValidationReport struct {
 	Errors   []Issue
 	Warnings []Issue
+	Stats    ValidationStats
+	Bundles  []BundleValidationStats
 }
 
 func (r *ValidationReport) AddError(path, message string) {
@@ -53,6 +82,7 @@ func Validate(root string, strict bool) (ValidationReport, error) {
 	report := ValidationReport{}
 	markdown := make(map[string]string)
 	concepts := make(map[string]*Concept)
+	invalidConcepts := make(map[string]bool)
 	var paths []string
 	err = filepath.WalkDir(resolvedRoot, func(path string, entry os.DirEntry, walkErr error) error {
 		if walkErr != nil {
@@ -65,9 +95,13 @@ func Validate(root string, strict bool) (ValidationReport, error) {
 		rel := relativePath(resolvedRoot, path)
 		paths = append(paths, rel)
 		markdown[rel] = path
+		reserved := filepath.Base(rel) == "index.md" || filepath.Base(rel) == "log.md"
 		data, readErr := os.ReadFile(path)
 		if readErr != nil {
 			report.AddError(rel, fmt.Sprintf("cannot read file: %v", readErr))
+			if !reserved {
+				invalidConcepts[rel] = true
+			}
 			return nil
 		}
 		switch filepath.Base(rel) {
@@ -76,22 +110,36 @@ func Validate(root string, strict bool) (ValidationReport, error) {
 		case "log.md":
 			validateLog(&report, rel, string(data))
 		default:
+			invalid := false
 			metadata, body, parseErr := parseFrontmatter(string(data))
 			if parseErr != nil {
 				report.AddError(rel, parseErr.Error())
+				invalid = true
+				invalidConcepts[rel] = invalid
 				return nil
 			}
 			typeValue, typeIsString := metadata["type"].(string)
 			if !typeIsString || strings.TrimSpace(typeValue) == "" {
 				report.AddError(rel, "frontmatter requires a non-empty string type")
+				invalid = true
 			}
+			beforeTimestampErrors := len(report.Errors)
 			validateTimestamp(&report, rel, metadata)
+			if len(report.Errors) > beforeTimestampErrors {
+				invalid = true
+			}
 			if strings.TrimSpace(body) == "" {
 				report.AddWarning(rel, "concept body is empty")
 			}
 			concept, conceptErr := parseConcept(path, resolvedRoot, rel)
 			if conceptErr == nil {
 				concepts[concept.ID] = concept
+			} else {
+				report.AddError(rel, conceptErr.Error())
+				invalid = true
+			}
+			if invalid {
+				invalidConcepts[rel] = true
 			}
 		}
 		return nil
@@ -108,8 +156,11 @@ func Validate(root string, strict bool) (ValidationReport, error) {
 		if readErr != nil {
 			continue
 		}
-		for _, link := range resolveDocumentLinksForValidation(resolvedRoot, rel, string(data), markdown, concepts) {
+		links := resolveDocumentLinksForValidation(resolvedRoot, rel, string(data), markdown, concepts)
+		report.Stats.LinksChecked += len(links)
+		for _, link := range links {
 			if link.Broken && !link.External {
+				report.Stats.BrokenLinks++
 				report.AddWarning(rel, fmt.Sprintf("link target not found: %s", link.RawTarget))
 			}
 		}
@@ -118,6 +169,8 @@ func Validate(root string, strict bool) (ValidationReport, error) {
 	if strict {
 		checkIndexCoverage(&report, resolvedRoot, markdown, concepts)
 	}
+	report.Stats = validationStats(resolvedRoot, "single-bundle", len(paths), countReservedFiles(paths), len(paths)-countReservedFiles(paths), len(concepts), len(invalidConcepts), report.Stats.LinksChecked, report.Stats.BrokenLinks, report.Stats.StaleGeneratedIndexes)
+	report.Bundles = []BundleValidationStats{bundleValidationStats(filepath.Base(resolvedRoot), resolvedRoot, report.Stats)}
 	report.Sort()
 	return report, nil
 }
@@ -207,8 +260,51 @@ func checkIndexCoverage(report *ValidationReport, root string, markdown map[stri
 		actual := content[start : end+len("<!-- manly:generated:end -->")]
 		expected := "<!-- manly:generated:start -->\n" + generatedIndexEntries(bundle, directory) + "<!-- manly:generated:end -->"
 		if actual != expected {
+			report.Stats.StaleGeneratedIndexes++
 			report.AddWarning(rel, "generated index section is stale")
 		}
+	}
+}
+
+func countReservedFiles(paths []string) int {
+	count := 0
+	for _, path := range paths {
+		base := filepath.Base(path)
+		if base == "index.md" || base == "log.md" {
+			count++
+		}
+	}
+	return count
+}
+
+func validationStats(root, mode string, markdownFiles, reservedFiles, conceptFiles, loadedConcepts, invalidConcepts, linksChecked, brokenLinks, staleIndexes int) ValidationStats {
+	return ValidationStats{
+		Root:                  root,
+		Mode:                  mode,
+		Bundles:               1,
+		MarkdownFiles:         markdownFiles,
+		ReservedFiles:         reservedFiles,
+		ConceptFiles:          conceptFiles,
+		LoadedConcepts:        loadedConcepts,
+		InvalidConceptFiles:   invalidConcepts,
+		LinksChecked:          linksChecked,
+		BrokenLinks:           brokenLinks,
+		StaleGeneratedIndexes: staleIndexes,
+	}
+}
+
+func bundleValidationStats(name, root string, stats ValidationStats) BundleValidationStats {
+	return BundleValidationStats{
+		Name:                  name,
+		Root:                  root,
+		MarkdownFiles:         stats.MarkdownFiles,
+		ReservedFiles:         stats.ReservedFiles,
+		ConceptFiles:          stats.ConceptFiles,
+		LoadedConcepts:        stats.LoadedConcepts,
+		InvalidConceptFiles:   stats.InvalidConceptFiles,
+		LinksChecked:          stats.LinksChecked,
+		BrokenLinks:           stats.BrokenLinks,
+		StaleGeneratedIndexes: stats.StaleGeneratedIndexes,
 	}
 }
 

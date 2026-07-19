@@ -16,7 +16,7 @@ func (command *CheckCommand) Run(app *appContext) error {
 	if err != nil {
 		return err
 	}
-	report, err := knowledge.Validate(app.root, command.Strict)
+	report, err := knowledge.ValidateWorkspaceRoot(app.root, command.Strict)
 	if err != nil {
 		return err
 	}

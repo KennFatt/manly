@@ -17,16 +17,36 @@ type AddCommand struct {
 }
 
 func (command *AddCommand) Run(app *appContext) error {
-	id, err := knowledge.Add(app.root, command.ConceptID, knowledge.NewConcept{
+	workspace, err := loadWorkspace(app.root)
+	if err != nil {
+		return err
+	}
+	input := knowledge.NewConcept{
 		Type:        command.Type,
 		Title:       command.Title,
 		Description: command.Description,
 		Tags:        splitTags(command.Tag),
-	}, command.Force)
+	}
+	if workspace.SingleRoot {
+		id, err := knowledge.Add(app.root, command.ConceptID, input, command.Force)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Created %s\n", id)
+		return nil
+	}
+	bundle, prefix, name, err := workspace.ResolveDirectory(command.ConceptID)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Created %s\n", id)
+	if bundle == nil || prefix == "" {
+		return fmt.Errorf("workspace concept path must include a bundle and concept: %s", command.ConceptID)
+	}
+	id, err := knowledge.Add(bundle.Root, "/"+prefix, input, command.Force)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Created %s\n", workspace.QualifyID(name, id))
 	return nil
 }
 

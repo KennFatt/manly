@@ -52,8 +52,8 @@ func TestCLIWorkflow(t *testing.T) {
 	}
 	assertCommandContains(t, root, []string{"index"}, "Updated index.md", "Updated group/index.md")
 	assertCommandSucceeds(t, root, []string{"index", "--check"})
-	assertCommandSucceeds(t, root, []string{"check", "--strict"})
-	assertCommandSucceeds(t, root, []string{"check", "--format", "json"})
+	assertCommandContains(t, root, []string{"check", "--strict"}, "Root:", "Mode: single-bundle", "Bundles: 1", "Loaded concepts:")
+	assertCommandContains(t, root, []string{"check", "--format", "json"}, `"root"`, `"mode": "single-bundle"`, `"stats"`, `"bundles"`, `"valid": true`)
 
 	t.Setenv("EDITOR", "true")
 	assertCommandSucceeds(t, root, []string{"edit", "/a"})
