@@ -24,6 +24,25 @@ export MANLY_ROOT=~/my-knowledge
 manly init
 ```
 
+### Persistent configuration
+
+`manly` creates `$HOME/.config/manly/config.yml` on first startup. Its built-in contents are:
+
+```yaml
+root: ~/.okf
+
+defaults:
+  format: compact
+  list:
+    recursive: false
+
+display:
+  actions: true
+  usage: true
+```
+
+The precedence for the bundle root is `--root > MANLY_ROOT > config.root > ~/.okf`. The configured format applies to `list`, `show`, `search`, `context`, `links`, `backlinks`, `graph`, and `check`; each command's `--format` flag overrides it. `--recursive` and `--no-recursive` override `defaults.list.recursive`. `display.actions` controls list/show action data and human-readable list/show action commands, while `display.usage` controls list usage hints and human-readable show action commands. Existing configuration files are read without rewriting and invalid configuration fails startup.
+
 **Examples**
 
 ```bash
@@ -80,13 +99,13 @@ A discovered workspace bundle must have parseable frontmatter in its root `index
 List concept-containing directories or concepts in a bundle or workspace. This is your primary browsing command.
 
 ```
-manly list [path] [--recursive] [--format FORMAT]
+manly list [path] [--recursive|--no-recursive] [--format FORMAT]
 ```
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--recursive` | bool | false | Include all nested concepts, not just immediate children |
-| `--format` | string | compact | Output format: `compact`, `fancy`, `json`, or `markdown` |
+| `--recursive` / `--no-recursive` | bool | false (configurable) | Include or exclude all nested concepts; overrides the configured recursive default |
+| `--format` | string | compact (configurable) | Output format: `compact`, `fancy`, `json`, or `markdown` |
 
 If no path is given, `/` (the root) is used.
 

@@ -12,7 +12,7 @@ type SearchCommand struct {
 	Type   string `help:"Filter by type."`
 	Path   string `help:"Restrict results to a path prefix."`
 	Limit  int    `default:"10" help:"Maximum results."`
-	Format string `default:"compact" help:"Output format."`
+	Format string `default:"${format}" help:"Output format."`
 }
 
 func (command *SearchCommand) Run(app *appContext) error {

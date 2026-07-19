@@ -12,8 +12,8 @@ import (
 
 type ListCommand struct {
 	Path      string `arg:"" optional:"" default:"/" help:"Directory path to list."`
-	Recursive bool   `help:"Include nested concepts."`
-	Format    string `default:"compact" help:"Output format."`
+	Recursive bool   `default:"${recursive}" negatable help:"Include nested concepts."`
+	Format    string `default:"${format}" help:"Output format."`
 }
 
 func (command *ListCommand) Run(app *appContext) error {
@@ -35,11 +35,11 @@ func (command *ListCommand) Run(app *appContext) error {
 				return fmt.Errorf("directory not found: %s", command.Path)
 			}
 			if command.Recursive {
-				return renderWorkspaceRecursiveList(workspace, format)
+				return renderWorkspaceRecursiveList(workspace, format, app.display)
 			}
-			return renderWorkspaceRootList(workspace, format)
+			return renderWorkspaceRootList(workspace, format, app.display)
 		}
-		return renderWorkspaceDirectory(workspace, bundle, name, prefix, command.Recursive, format)
+		return renderWorkspaceDirectory(workspace, bundle, name, prefix, command.Recursive, format, app.display)
 	}
 	bundle := workspace.Bundles[0]
 	prefix, err := directoryPrefix(command.Path)
@@ -50,11 +50,11 @@ func (command *ListCommand) Run(app *appContext) error {
 	directories := childDirectories(bundle, prefix)
 	if command.Recursive {
 		if format == formatJSON {
-			return renderJSONRecursiveDirectory(os.Stdout, app.root, prefix, directories, concepts)
+			return renderJSONRecursiveDirectory(os.Stdout, app.root, prefix, directories, concepts, app.display)
 		}
-		return renderConceptList(app.root, bundle, concepts, format, bundleDirectoryTitle(bundle, prefix))
+		return renderConceptList(app.root, bundle, concepts, format, bundleDirectoryTitle(bundle, prefix), app.display)
 	}
-	return renderDirectoryContents(app.root, bundle, prefix, directories, concepts, format)
+	return renderDirectoryContents(app.root, bundle, prefix, directories, concepts, format, app.display)
 }
 
 func directoryPrefix(value string) (string, error) {

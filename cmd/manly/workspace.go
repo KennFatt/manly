@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/KennFatt/manly/internal/config"
 	"github.com/KennFatt/manly/internal/knowledge"
 	"github.com/KennFatt/manly/internal/renderer"
 )
@@ -125,18 +126,20 @@ func workspaceDirectoryEntries(workspace *knowledge.Workspace, name string, bund
 	return entries
 }
 
-func renderWorkspaceRecursiveList(workspace *knowledge.Workspace, format outputFormat) error {
+func renderWorkspaceRecursiveList(workspace *knowledge.Workspace, format outputFormat, display config.Display) error {
 	refs := allWorkspaceRefs(workspace)
 	return renderOutput(os.Stdout, format, renderer.ListView{
-		Root:      workspace.Root,
-		Path:      "/",
-		Heading:   "Knowledge Workspace",
-		Recursive: true,
-		Entries:   conceptEntries(displayRefs(workspace, refs)),
+		Root:        workspace.Root,
+		Path:        "/",
+		Heading:     "Knowledge Workspace",
+		Recursive:   true,
+		Entries:     conceptEntries(displayRefs(workspace, refs), display.Actions),
+		HideActions: !display.Actions,
+		HideUsage:   !display.Usage,
 	})
 }
 
-func renderWorkspaceRootList(workspace *knowledge.Workspace, format outputFormat) error {
+func renderWorkspaceRootList(workspace *knowledge.Workspace, format outputFormat, display config.Display) error {
 	directories := make([]renderer.Directory, 0, len(workspace.Bundles))
 	for _, bundle := range workspace.Bundles {
 		name := workspaceName(workspace, bundle)
@@ -148,10 +151,12 @@ func renderWorkspaceRootList(workspace *knowledge.Workspace, format outputFormat
 		Path:        "/",
 		Heading:     "Knowledge Workspace",
 		Directories: directories,
+		HideActions: !display.Actions,
+		HideUsage:   !display.Usage,
 	})
 }
 
-func renderWorkspaceDirectory(workspace *knowledge.Workspace, bundle *knowledge.Bundle, name, prefix string, recursive bool, format outputFormat) error {
+func renderWorkspaceDirectory(workspace *knowledge.Workspace, bundle *knowledge.Bundle, name, prefix string, recursive bool, format outputFormat, display config.Display) error {
 	concepts := bundle.ConceptsUnder(prefix, recursive)
 	refs := refsForBundle(workspace, name, bundle, concepts)
 	directories := childDirectories(bundle, prefix)
@@ -160,11 +165,13 @@ func renderWorkspaceDirectory(workspace *knowledge.Workspace, bundle *knowledge.
 		displayPath += "/" + prefix
 	}
 	view := renderer.ListView{
-		Root:      workspace.Root,
-		Path:      displayPath,
-		Heading:   bundleDirectoryTitle(bundle, prefix),
-		Recursive: recursive,
-		Entries:   conceptEntries(displayRefs(workspace, refs)),
+		Root:        workspace.Root,
+		Path:        displayPath,
+		Heading:     bundleDirectoryTitle(bundle, prefix),
+		Recursive:   recursive,
+		Entries:     conceptEntries(displayRefs(workspace, refs), display.Actions),
+		HideActions: !display.Actions,
+		HideUsage:   !display.Usage,
 	}
 	if recursive {
 		view.Directories = workspaceDirectoryEntries(workspace, name, bundle, directories)
@@ -175,7 +182,7 @@ func renderWorkspaceDirectory(workspace *knowledge.Workspace, bundle *knowledge.
 	return renderOutput(os.Stdout, format, view)
 }
 
-func renderWorkspaceShow(workspace *knowledge.Workspace, ref knowledge.ConceptRef, format outputFormat) error {
+func renderWorkspaceShow(workspace *knowledge.Workspace, ref knowledge.ConceptRef, format outputFormat, display config.Display) error {
 	backlinks, err := ref.Bundle.Backlinks(ref.Concept.ID)
 	if err != nil {
 		return err
@@ -190,10 +197,10 @@ func renderWorkspaceShow(workspace *knowledge.Workspace, ref knowledge.ConceptRe
 		copy.Link = displayLinks(workspace, ref.BundleName, []knowledge.Link{backlink.Link})[0]
 		displayedBacklinks = append(displayedBacklinks, copy)
 	}
-	return renderShow(os.Stdout, displayed, linkViews(outgoing), displayedBacklinks, format)
+	return renderShow(os.Stdout, displayed, linkViews(outgoing), displayedBacklinks, format, display)
 }
 
-func renderWorkspaceShowCollection(workspace *knowledge.Workspace, refs []knowledge.ConceptRef, format outputFormat) error {
+func renderWorkspaceShowCollection(workspace *knowledge.Workspace, refs []knowledge.ConceptRef, format outputFormat, display config.Display) error {
 	concepts := displayRefs(workspace, refs)
 	// Relationships are bundle-local, so calculate them before replacing IDs for display.
 	results := make([]renderer.ShowResult, 0, len(refs))
@@ -213,7 +220,8 @@ func renderWorkspaceShowCollection(workspace *knowledge.Workspace, refs []knowle
 			Concept:   viewConcept(concepts[index], true),
 			Links:     linkViews(displayLinks(workspace, ref.BundleName, ref.Concept.Links)),
 			Backlinks: linkViewsFromBacklinks(displayedBacklinks),
-			Actions:   actionViews(concepts[index].ID),
+			Actions:   actionViews(concepts[index].ID, display.Actions),
+			HideUsage: !display.Usage,
 		})
 	}
 	return renderOutput(os.Stdout, format, renderer.ShowCollectionView{Results: results})

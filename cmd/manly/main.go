@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/KennFatt/manly/internal/config"
 	"github.com/KennFatt/manly/internal/knowledge"
 )
 
@@ -17,11 +18,20 @@ func main() {
 }
 
 func run(args []string) error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("resolve home directory: %w", err)
+	}
+	resolvedConfig, err := config.Load(home)
+	if err != nil {
+		return err
+	}
+
 	commandLine := &cli{}
 	exitCode := -1
 	parser, err := newParser(commandLine, func(code int) {
 		exitCode = code
-	})
+	}, resolvedConfig)
 	if err != nil {
 		return err
 	}
@@ -43,11 +53,11 @@ func run(args []string) error {
 		return err
 	}
 
-	root, err := resolveRoot(commandLine.Root)
+	root, err := resolveRoot(commandLine.Root, resolvedConfig.Root)
 	if err != nil {
 		return err
 	}
-	return context.Run(&appContext{root: root})
+	return context.Run(&appContext{root: root, display: resolvedConfig.Display})
 }
 
 func wantsTopLevelHelp(args []string) bool {
@@ -69,13 +79,15 @@ func wantsTopLevelHelp(args []string) bool {
 	return false
 }
 
-func resolveRoot(explicit string) (string, error) {
+func resolveRoot(explicit string, configured ...string) (string, error) {
 	if explicit != "" {
 		return explicit, nil
 	}
-	root := os.Getenv("MANLY_ROOT")
-	if root != "" {
+	if root := os.Getenv("MANLY_ROOT"); root != "" {
 		return root, nil
+	}
+	if len(configured) > 0 && configured[0] != "" {
+		return configured[0], nil
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {

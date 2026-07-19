@@ -9,7 +9,7 @@ import (
 type ContextCommand struct {
 	Query  string `arg:"" help:"Search query or concept ID."`
 	Limit  int    `default:"5" help:"Maximum concepts."`
-	Format string `default:"compact" help:"Output format."`
+	Format string `default:"${format}" help:"Output format."`
 }
 
 func (command *ContextCommand) Run(app *appContext) error {
