@@ -525,6 +525,33 @@ Exit code is non-zero when there are errors.
 
 ---
 
+## version
+
+Print the build-stamped version of the `manly` executable.
+
+```
+manly version
+```
+
+No flags or arguments.
+
+**Examples**
+
+```bash
+# Check which version is installed
+manly version
+```
+
+**What it shows**
+
+Prints `manly <version>` and exits. The version value depends on how the binary was built:
+
+- **`make build` / `make install`**: Includes the Git-derived version (e.g. `manly v1.2.0` on an exact release tag, `manly 1.1.0-1-g<hash>` on a post-release commit, or `manly dev` if Git metadata is unavailable).
+- **Direct `go build`**: Always reports `manly dev` because no linker stamp is applied.
+- **Overridden builds**: `VERSION=v1.2.0 make build` uses the supplied value verbatim.
+
+---
+
 ## Output Formats
 
 All read commands (`list`, `show`, `search`, `context`, `links`, `backlinks`, `graph`, `check`) accept `--format`.

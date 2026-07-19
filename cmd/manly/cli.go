@@ -27,6 +27,7 @@ type cli struct {
 	Move      MoveCommand      `cmd help:"Move a concept and update links."`
 	Index     IndexCommand     `cmd help:"Update marked generated index sections."`
 	Check     CheckCommand     `cmd help:"Validate the bundle."`
+	Version   VersionCommand   `cmd help:"Print the manly executable version."`
 }
 
 func newParser(commandLine *cli, exit func(int)) (*kong.Kong, error) {

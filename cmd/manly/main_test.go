@@ -112,6 +112,28 @@ func TestCLIRootPrecedence(t *testing.T) {
 	}
 }
 
+func TestCLIVersion(t *testing.T) {
+	output, err := captureOutput(t, func() error { return run([]string{"version"}) })
+	if err != nil {
+		t.Fatalf("version = %q, %v", output, err)
+	}
+	// Direct go build reports "dev" since no linker stamp is applied.
+	if !strings.HasPrefix(output, "manly ") {
+		t.Fatalf("version output %q does not start with 'manly '", output)
+	}
+	if strings.TrimSpace(output) == "manly" {
+		t.Fatalf("version output %q is missing a version value", output)
+	}
+}
+
+func TestCLIVersionNoBundle(t *testing.T) {
+	// Version should succeed without a valid root.
+	result := run([]string{"version"})
+	if result != nil {
+		t.Fatalf("version without bundle = %v", result)
+	}
+}
+
 func TestCLIParsingHelpers(t *testing.T) {
 	if got, err := resolveRoot("/explicit"); err != nil || got != "/explicit" {
 		t.Fatalf("resolveRoot() = %q, %v", got, err)
