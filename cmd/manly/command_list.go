@@ -21,10 +21,27 @@ func (command *ListCommand) Run(app *appContext) error {
 	if err != nil {
 		return err
 	}
-	bundle, err := loadBundle(app.root)
+	workspace, err := loadWorkspace(app.root)
 	if err != nil {
 		return err
 	}
+	if !workspace.SingleRoot {
+		bundle, prefix, name, err := workspace.ResolveDirectory(command.Path)
+		if err != nil {
+			return err
+		}
+		if bundle == nil {
+			if strings.Trim(command.Path, " /") != "" {
+				return fmt.Errorf("directory not found: %s", command.Path)
+			}
+			if command.Recursive {
+				return renderWorkspaceRecursiveList(workspace, format)
+			}
+			return renderWorkspaceRootList(workspace, format)
+		}
+		return renderWorkspaceDirectory(workspace, bundle, name, prefix, command.Recursive, format)
+	}
+	bundle := workspace.Bundles[0]
 	prefix, err := directoryPrefix(command.Path)
 	if err != nil {
 		return err

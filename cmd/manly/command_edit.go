@@ -12,14 +12,15 @@ type EditCommand struct {
 }
 
 func (command *EditCommand) Run(app *appContext) error {
-	bundle, err := loadBundle(app.root)
+	workspace, err := loadWorkspace(app.root)
 	if err != nil {
 		return err
 	}
-	concept, err := bundle.Get(command.ConceptID)
+	ref, err := workspace.ResolveConcept(command.ConceptID)
 	if err != nil {
 		return err
 	}
+	concept := ref.Concept
 	editor := os.Getenv("EDITOR")
 	if editor == "" {
 		return errors.New("EDITOR is not set")

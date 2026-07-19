@@ -153,6 +153,24 @@ See the [Type Safety](/programming/type-safety.md) concept.
 
 The file is the source of truth. `manly` derives search indexes and graph relationships while reading the bundle.
 
+### Multiple bundles
+
+`MANLY_ROOT` and `--root` can also point to a workspace containing direct child bundles:
+
+```text
+knowledge/
+├── engineering-preferences/
+│   ├── index.md              # okf_version and type: Bundle
+│   └── typescript/type-safety.md
+└── personal/
+    ├── index.md              # okf_version and type: Bundle
+    └── notes.md
+```
+
+Workspace-wide `list`, `search`, and `check` aggregate these bundles. Concept commands use an explicit bundle-qualified ID, such as `/engineering-preferences/typescript/type-safety`. Links inside a bundle remain portable and bundle-local, so `/typescript/type-safety.md` resolves from the `engineering-preferences` bundle. Cross-bundle links and moves are not supported.
+
+A root that is itself a bundle continues to use local IDs such as `/programming/type-safety`.
+
 ## Specification
 
 `manly` uses the [Open Knowledge Format (OKF) v0.1](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md). Concepts are Markdown files with YAML frontmatter, identified by root-relative path without `.md`. Links use standard Markdown syntax.
