@@ -115,11 +115,13 @@ Find it later:
 manly search "learning Go"
 ```
 
-Validate the bundle:
+Validate the bundle or workspace:
 
 ```bash
 manly check
 ```
+
+`check` reports the resolved root, root mode, discovered bundles, scanned Markdown files, loaded and invalid concepts, checked and broken links, and validation issues. Use `--strict` for advisory generated-index checks and `--format json` for machine-readable statistics.
 
 ## Knowledge bundle
 
