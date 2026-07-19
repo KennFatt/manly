@@ -107,10 +107,15 @@ func renderCompactShowCollection(w io.Writer, view ShowCollectionView) error {
 }
 
 func renderCompactSearch(w io.Writer, view SearchView) error {
+	rows := make([][]string, 0, len(view.Results))
 	for _, result := range view.Results {
-		fmt.Fprintf(w, "%.2f\t%s\t%s\n", result.Score, result.Concept.ID, result.Concept.Title)
+		rows = append(rows, []string{
+			fmt.Sprintf("%.2f", result.Score),
+			result.Concept.ID,
+			result.Concept.Title,
+		})
 	}
-	return nil
+	return renderCompactTable(w, []string{"SCORE", "ID", "TITLE"}, rows)
 }
 
 func renderCompactContext(w io.Writer, view ContextView) error {
@@ -121,17 +126,67 @@ func renderCompactContext(w io.Writer, view ContextView) error {
 }
 
 func renderCompactLinks(w io.Writer, view LinksView) error {
+	rows := make([][]string, 0, len(view.Links))
 	for _, link := range view.Links {
-		fmt.Fprintf(w, "%s\t%s\n", link.Label, compactLinkTarget(link))
+		rows = append(rows, []string{link.Label, compactLinkTarget(link)})
+	}
+	return renderCompactTable(w, []string{"LABEL", "TARGET"}, rows)
+}
+
+func renderCompactBacklinks(w io.Writer, view BacklinksView) error {
+	rows := make([][]string, 0, len(view.Backlinks))
+	for _, link := range view.Backlinks {
+		rows = append(rows, []string{link.Target, link.Label})
+	}
+	return renderCompactTable(w, []string{"SOURCE", "LABEL"}, rows)
+}
+
+func renderCompactTable(w io.Writer, headers []string, rows [][]string) error {
+	widths := make([]int, len(headers))
+	for index, header := range headers {
+		widths[index] = utf8.RuneCountInString(header)
+	}
+	for rowIndex, row := range rows {
+		if len(row) != len(headers) {
+			return fmt.Errorf("compact table row %d has %d columns, want %d", rowIndex, len(row), len(headers))
+		}
+		for index, value := range row {
+			if width := utf8.RuneCountInString(value); width > widths[index] {
+				widths[index] = width
+			}
+		}
+	}
+
+	if err := writeCompactTableRow(w, headers, widths); err != nil {
+		return err
+	}
+	for _, row := range rows {
+		if err := writeCompactTableRow(w, row, widths); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func renderCompactBacklinks(w io.Writer, view BacklinksView) error {
-	for _, link := range view.Backlinks {
-		fmt.Fprintf(w, "%s\t%s\n", link.Target, link.Label)
+func writeCompactTableRow(w io.Writer, values []string, widths []int) error {
+	for index, value := range values {
+		if index > 0 {
+			if _, err := io.WriteString(w, "  "); err != nil {
+				return err
+			}
+		}
+		if _, err := io.WriteString(w, value); err != nil {
+			return err
+		}
+		if index < len(values)-1 {
+			padding := widths[index] - utf8.RuneCountInString(value)
+			if _, err := io.WriteString(w, strings.Repeat(" ", padding)); err != nil {
+				return err
+			}
+		}
 	}
-	return nil
+	_, err := io.WriteString(w, "\n")
+	return err
 }
 
 func renderCompactGraph(w io.Writer, view GraphView) error {
