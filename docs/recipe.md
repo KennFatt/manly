@@ -591,8 +591,7 @@ EDITOR="nano" manly edit /concept/id
 
 ```bash
 # Check which root is active
-manly help          # shows "Root: <path>" in usage
-manly list          # footer shows the resolved root path
+manly list          # output includes the resolved root path
 
 # Override for one command
 manly --root ./my-bundle list
@@ -762,8 +761,7 @@ Agents get concept bodies, links, and navigation actions. The agent can follow u
 ### How do I know which bundle root is active?
 
 ```bash
-manly help     # shows "Root: <path>"
-manly list     # footer shows the resolved root
+manly list     # output includes the resolved root
 ```
 
 ### How do I use a different bundle for a single command?
