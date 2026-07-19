@@ -1,70 +1,34 @@
 package main
 
-import (
-	"errors"
-	"fmt"
-)
+import "github.com/KennFatt/manly/internal/knowledge"
 
-func runLinks(root string, args []string, backlinks bool) error {
-	name := "links"
-	if backlinks {
-		name = "backlinks"
-	}
-	flags := newFlagSet(name)
-	formatValue := flags.String("format", string(formatCompact), "output format")
-	if err := flags.Parse(normalizeFlagArgs(args, map[string]bool{"--format": true})); err != nil {
-		return err
-	}
-	if flags.NArg() != 1 {
-		return fmt.Errorf("usage: manly %s <concept-id> [--format FORMAT]", name)
-	}
-	format, err := parseFormat(*formatValue)
-	if err != nil {
-		return err
-	}
-	bundle, err := loadBundle(root)
-	if err != nil {
-		return err
-	}
-	concept, err := bundle.Get(flags.Arg(0))
-	if err != nil {
-		return err
-	}
-	if backlinks {
-		incoming, err := bundle.Backlinks(concept.ID)
-		if err != nil {
-			return err
-		}
-		return renderBacklinks(concept, incoming, format)
-	}
-	outgoing, err := bundle.Outgoing(concept.ID)
-	if err != nil {
-		return err
-	}
-	return renderLinks(concept, outgoing, format)
+type GraphCommand struct {
+	ConceptID string `arg:"" help:"Starting concept ID."`
+	Depth     int    `default:"1" help:"Maximum traversal depth."`
+	Format    string `default:"${format}" help:"Output format."`
 }
 
-func runGraph(root string, args []string) error {
-	flags := newFlagSet("graph")
-	depth := flags.Int("depth", 1, "maximum traversal depth")
-	formatValue := flags.String("format", string(formatCompact), "output format")
-	if err := flags.Parse(normalizeFlagArgs(args, map[string]bool{"--depth": true, "--format": true})); err != nil {
-		return err
-	}
-	if flags.NArg() != 1 {
-		return errors.New("usage: manly graph <concept-id> [--depth N] [--format FORMAT]")
-	}
-	format, err := parseFormat(*formatValue)
+func (command *GraphCommand) Run(app *appContext) error {
+	format, err := parseFormat(command.Format)
 	if err != nil {
 		return err
 	}
-	bundle, err := loadBundle(root)
+	workspace, err := loadWorkspace(app.root)
 	if err != nil {
 		return err
 	}
-	nodes, err := bundle.Graph(flags.Arg(0), *depth)
+	ref, err := workspace.ResolveConcept(command.ConceptID)
 	if err != nil {
 		return err
+	}
+	nodes, err := ref.Bundle.Graph(ref.Concept.ID, command.Depth)
+	if err != nil {
+		return err
+	}
+	if !workspace.SingleRoot {
+		for index := range nodes {
+			nodes[index].Concept = displayConcept(workspace, knowledge.ConceptRef{BundleName: ref.BundleName, Bundle: ref.Bundle, Concept: nodes[index].Concept})
+		}
 	}
 	return renderGraph(nodes, format)
 }

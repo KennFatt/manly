@@ -147,13 +147,24 @@ PATH                                    TITLE / CONCEPTS
 Details: manly show <ID>
 ```
 
-Other compact outputs remain line-oriented:
+Search, links, and backlinks use aligned tables with explicit headers:
 
 ```text
-search:  score  ID  title
-links:   label  target
-graph:   depth  ID  title
+SCORE  ID                              TITLE
+12.00  /engineering-preferences/react  React Preferences
 ```
+
+```text
+LABEL          TARGET
+related topic  /engineering/preferences
+```
+
+```text
+SOURCE                       LABEL
+authoring/preferences         related topic
+```
+
+Other compact outputs remain line-oriented, such as graph and check.
 
 ### Fancy
 

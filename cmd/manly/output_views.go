@@ -4,50 +4,61 @@ import (
 	"io"
 	"os"
 
+	"github.com/KennFatt/manly/internal/config"
 	"github.com/KennFatt/manly/internal/knowledge"
 	"github.com/KennFatt/manly/internal/renderer"
 )
 
-func renderConceptList(root string, bundle *knowledge.Bundle, concepts []*knowledge.Concept, format outputFormat, heading string) error {
+func renderConceptList(root string, bundle *knowledge.Bundle, concepts []*knowledge.Concept, format outputFormat, heading string, display config.Display) error {
 	view := renderer.ListView{
-		Root:      root,
-		Path:      heading,
-		Heading:   heading,
-		Recursive: true,
-		Entries:   conceptEntries(concepts),
+		Root:        root,
+		Path:        heading,
+		Heading:     heading,
+		Recursive:   true,
+		Entries:     conceptEntries(concepts, display.Actions),
+		HideActions: !display.Actions,
+		HideUsage:   !display.Usage,
 	}
 	return renderOutput(os.Stdout, format, view)
 }
 
-func renderJSONRecursiveDirectory(w io.Writer, root string, prefix string, directories []string, concepts []*knowledge.Concept) error {
+func renderJSONRecursiveDirectory(w io.Writer, root string, prefix string, directories []string, concepts []*knowledge.Concept, display config.Display) error {
 	view := renderer.ListView{
 		Root:        root,
 		Path:        directoryDisplay(prefix),
 		Recursive:   true,
 		Directories: directoryEntries(directories, nil),
-		Entries:     conceptEntries(concepts),
+		Entries:     conceptEntries(concepts, display.Actions),
+		HideActions: !display.Actions,
+		HideUsage:   !display.Usage,
 	}
 	return renderOutput(w, formatJSON, view)
 }
 
-func renderDirectoryContents(root string, bundle *knowledge.Bundle, prefix string, directories []string, concepts []*knowledge.Concept, format outputFormat) error {
+func renderDirectoryContents(root string, bundle *knowledge.Bundle, prefix string, directories []string, concepts []*knowledge.Concept, format outputFormat, display config.Display) error {
 	view := renderer.ListView{
 		Root:        root,
 		Path:        directoryDisplay(prefix),
 		Heading:     bundleDirectoryTitle(bundle, prefix),
 		Directories: directoryEntries(directories, bundle),
-		Entries:     conceptEntries(concepts),
+		Entries:     conceptEntries(concepts, display.Actions),
 		Count:       countConceptsUnder(bundle, prefix),
+		HideActions: !display.Actions,
+		HideUsage:   !display.Usage,
 	}
 	return renderOutput(os.Stdout, format, view)
 }
 
-func conceptEntries(concepts []*knowledge.Concept) []renderer.ListEntry {
+func conceptEntries(concepts []*knowledge.Concept, showActions ...bool) []renderer.ListEntry {
+	actionsEnabled := true
+	if len(showActions) > 0 {
+		actionsEnabled = showActions[0]
+	}
 	entries := make([]renderer.ListEntry, 0, len(concepts))
 	for _, concept := range concepts {
 		entries = append(entries, renderer.ListEntry{
 			Concept: viewConcept(concept, false),
-			Actions: actionViews(concept.ID),
+			Actions: actionViews(concept.ID, actionsEnabled),
 		})
 	}
 	return entries
@@ -72,21 +83,23 @@ func trimDirectoryPrefix(directory string) string {
 	return directory[1:]
 }
 
-func renderShow(w io.Writer, concept *knowledge.Concept, outgoing []linkView, backlinks []knowledge.Backlink, format outputFormat) error {
+func renderShow(w io.Writer, concept *knowledge.Concept, outgoing []linkView, backlinks []knowledge.Backlink, format outputFormat, display config.Display) error {
 	backlinkViews := make([]linkView, 0, len(backlinks))
 	for _, backlink := range backlinks {
 		backlinkViews = append(backlinkViews, backlinkView(backlink))
 	}
 	view := renderer.ShowView{
-		Concept:   viewConcept(concept, true),
-		Links:     outgoing,
-		Backlinks: backlinkViews,
-		Actions:   actionViews(concept.ID),
+		Concept:     viewConcept(concept, true),
+		Links:       outgoing,
+		Backlinks:   backlinkViews,
+		Actions:     actionViews(concept.ID, display.Actions),
+		HideActions: !display.Actions,
+		HideUsage:   !display.Usage,
 	}
 	return renderOutput(w, format, view)
 }
 
-func renderShowCollection(w io.Writer, bundle *knowledge.Bundle, concepts []*knowledge.Concept, format outputFormat) error {
+func renderShowCollection(w io.Writer, bundle *knowledge.Bundle, concepts []*knowledge.Concept, format outputFormat, display config.Display) error {
 	results := make([]renderer.ShowResult, 0, len(concepts))
 	for _, concept := range concepts {
 		backlinks, err := bundle.Backlinks(concept.ID)
@@ -101,7 +114,8 @@ func renderShowCollection(w io.Writer, bundle *knowledge.Bundle, concepts []*kno
 			Concept:   viewConcept(concept, true),
 			Links:     linkViews(concept.Links),
 			Backlinks: backlinkViews,
-			Actions:   actionViews(concept.ID),
+			Actions:   actionViews(concept.ID, display.Actions),
+			HideUsage: !display.Usage,
 		})
 	}
 	return renderOutput(w, format, renderer.ShowCollectionView{Results: results})
@@ -186,11 +200,50 @@ func renderGraph(nodes []knowledge.GraphNode, format outputFormat) error {
 
 func renderCheck(report knowledge.ValidationReport, format outputFormat) error {
 	view := renderer.CheckView{
+		Root:     report.Stats.Root,
+		Mode:     report.Stats.Mode,
+		Stats:    checkStats(report),
+		Bundles:  checkBundles(report.Bundles),
 		Errors:   checkIssues(report.Errors),
 		Warnings: checkIssues(report.Warnings),
 		Valid:    report.Valid(),
 	}
 	return renderOutput(os.Stdout, format, view)
+}
+
+func checkStats(report knowledge.ValidationReport) renderer.CheckStats {
+	return renderer.CheckStats{
+		Bundles:               report.Stats.Bundles,
+		MarkdownFiles:         report.Stats.MarkdownFiles,
+		ReservedFiles:         report.Stats.ReservedFiles,
+		ConceptFiles:          report.Stats.ConceptFiles,
+		LoadedConcepts:        report.Stats.LoadedConcepts,
+		InvalidConceptFiles:   report.Stats.InvalidConceptFiles,
+		LinksChecked:          report.Stats.LinksChecked,
+		BrokenLinks:           report.Stats.BrokenLinks,
+		StaleGeneratedIndexes: report.Stats.StaleGeneratedIndexes,
+		Errors:                len(report.Errors),
+		Warnings:              len(report.Warnings),
+	}
+}
+
+func checkBundles(bundles []knowledge.BundleValidationStats) []renderer.CheckBundle {
+	result := make([]renderer.CheckBundle, 0, len(bundles))
+	for _, bundle := range bundles {
+		result = append(result, renderer.CheckBundle{
+			Name:                  bundle.Name,
+			Root:                  bundle.Root,
+			MarkdownFiles:         bundle.MarkdownFiles,
+			ReservedFiles:         bundle.ReservedFiles,
+			ConceptFiles:          bundle.ConceptFiles,
+			LoadedConcepts:        bundle.LoadedConcepts,
+			InvalidConceptFiles:   bundle.InvalidConceptFiles,
+			LinksChecked:          bundle.LinksChecked,
+			BrokenLinks:           bundle.BrokenLinks,
+			StaleGeneratedIndexes: bundle.StaleGeneratedIndexes,
+		})
+	}
+	return result
 }
 
 func checkIssues(issues []knowledge.Issue) []renderer.Issue {

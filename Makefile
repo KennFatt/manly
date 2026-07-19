@@ -2,15 +2,18 @@ GO ?= go
 BINARY ?= manly
 PREFIX ?= $(HOME)/.local
 BINDIR ?= $(PREFIX)/bin
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+
+GO_BUILD = $(GO) build -ldflags "-X main.version=$(VERSION)"
 
 .PHONY: build install test coverage check clean
 
 build:
-	$(GO) build -o "$(BINARY)" ./cmd/manly
+	$(GO_BUILD) -o "$(BINARY)" ./cmd/manly
 
 install:
 	mkdir -p "$(BINDIR)"
-	$(GO) build -o "$(BINDIR)/$(BINARY)" ./cmd/manly
+	$(GO_BUILD) -o "$(BINDIR)/$(BINARY)" ./cmd/manly
 
 # Run the full Go toolchain checks used by this project.
 test:

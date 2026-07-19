@@ -92,6 +92,25 @@ export MANLY_ROOT="$HOME/knowledge"
 manly init
 ```
 
+## Configuration
+
+On first startup, `manly` creates `$HOME/.config/manly/config.yml` with these defaults:
+
+```yaml
+root: ~/.okf
+
+defaults:
+  format: compact
+  list:
+    recursive: false
+
+display:
+  actions: true
+  usage: true
+```
+
+Edit this file to persist preferences. Configuration is resolved with the precedence `--root > MANLY_ROOT > config.root > ~/.okf`; an explicit format flag overrides `defaults.format`, and `--recursive` or `--no-recursive` overrides the configured list behavior. The file is loaded and validated at startup and is never rewritten after it exists.
+
 Create a concept:
 
 ```bash
@@ -115,11 +134,13 @@ Find it later:
 manly search "learning Go"
 ```
 
-Validate the bundle:
+Validate the bundle or workspace:
 
 ```bash
 manly check
 ```
+
+`check` reports the resolved root, root mode, discovered bundles, scanned Markdown files, loaded and invalid concepts, checked and broken links, and validation issues. Use `--strict` for advisory generated-index checks and `--format json` for machine-readable statistics.
 
 ## Knowledge bundle
 
@@ -153,6 +174,24 @@ See the [Type Safety](/programming/type-safety.md) concept.
 
 The file is the source of truth. `manly` derives search indexes and graph relationships while reading the bundle.
 
+### Multiple bundles
+
+`MANLY_ROOT` and `--root` can also point to a workspace containing direct child bundles:
+
+```text
+knowledge/
+├── engineering-preferences/
+│   ├── index.md              # okf_version and type: Bundle
+│   └── typescript/type-safety.md
+└── personal/
+    ├── index.md              # okf_version and type: Bundle
+    └── notes.md
+```
+
+Workspace-wide `list`, `search`, and `check` aggregate these bundles. Concept commands use an explicit bundle-qualified ID, such as `/engineering-preferences/typescript/type-safety`. Links inside a bundle remain portable and bundle-local, so `/typescript/type-safety.md` resolves from the `engineering-preferences` bundle. Cross-bundle links and moves are not supported.
+
+A root that is itself a bundle continues to use local IDs such as `/programming/type-safety`.
+
 ## Specification
 
 `manly` uses the [Open Knowledge Format (OKF) v0.1](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md). Concepts are Markdown files with YAML frontmatter, identified by root-relative path without `.md`. Links use standard Markdown syntax.
@@ -174,8 +213,9 @@ The file is the source of truth. `manly` derives search indexes and graph relati
 | `move` | Move a concept and update links |
 | `index` | Update marked generated index sections |
 | `check` | Validate the bundle |
+| `version` | Print the manly executable version |
 
-All read commands support `--format compact|fancy|json|markdown` (default: `compact`).
+All read commands support `--format compact|fancy|json|markdown` (default: `compact`, configurable). `list` also supports `--recursive` and `--no-recursive`.
 
 See **[docs/recipe.md](docs/recipe.md)** for complete flag tables, examples, agent workflows, and FAQ.
 
@@ -214,7 +254,10 @@ Build a local binary:
 
 ```bash
 make build
+./manly version   # prints the build-stamped version
 ```
+
+Direct `go build` always reports `dev`. `make build` injects the version derived from Git tags.
 
 Clean the local binary:
 

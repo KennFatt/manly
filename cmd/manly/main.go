@@ -1,14 +1,12 @@
 package main
 
 import (
-	"errors"
-	"flag"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/KennFatt/manly/internal/config"
 	"github.com/KennFatt/manly/internal/knowledge"
 )
 
@@ -20,185 +18,84 @@ func main() {
 }
 
 func run(args []string) error {
-	root, commandArgs, err := parseGlobalArgs(args)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("resolve home directory: %w", err)
+	}
+	resolvedConfig, err := config.Load(home)
 	if err != nil {
 		return err
 	}
-	if len(commandArgs) == 0 || commandArgs[0] == "help" || commandArgs[0] == "--help" || commandArgs[0] == "-h" {
-		printUsage(root)
-		return nil
+
+	commandLine := &cli{}
+	exitCode := -1
+	parser, err := newParser(commandLine, func(code int) {
+		exitCode = code
+	}, resolvedConfig)
+	if err != nil {
+		return err
 	}
 
-	switch commandArgs[0] {
-	case "init":
-		return runInit(root, commandArgs[1:])
-	case "list":
-		return runList(root, commandArgs[1:])
-	case "show":
-		return runShow(root, commandArgs[1:])
-	case "search":
-		return runSearch(root, commandArgs[1:])
-	case "context":
-		return runContext(root, commandArgs[1:])
-	case "links":
-		return runLinks(root, commandArgs[1:], false)
-	case "backlinks":
-		return runLinks(root, commandArgs[1:], true)
-	case "graph":
-		return runGraph(root, commandArgs[1:])
-	case "add":
-		return runAdd(root, commandArgs[1:])
-	case "edit":
-		return runEdit(root, commandArgs[1:])
-	case "move":
-		return runMove(root, commandArgs[1:])
-	case "index":
-		return runIndex(root, commandArgs[1:])
-	case "check":
-		return runCheck(root, commandArgs[1:])
-	default:
-		return fmt.Errorf("unknown command %q; use 'manly help' for usage", commandArgs[0])
+	parseArgs := args
+	if wantsTopLevelHelp(args) {
+		parseArgs = []string{"--help"}
 	}
+	context, err := parser.Parse(parseArgs)
+	if exitCode >= 0 {
+		if exitCode == 0 {
+			return nil
+		}
+		if err == nil {
+			return fmt.Errorf("parser exited with status %d", exitCode)
+		}
+	}
+	if err != nil {
+		return err
+	}
+
+	root, err := resolveRoot(commandLine.Root, resolvedConfig.Root)
+	if err != nil {
+		return err
+	}
+	return context.Run(&appContext{root: root, display: resolvedConfig.Display})
 }
 
-func parseGlobalArgs(args []string) (string, []string, error) {
-	root := os.Getenv("MANLY_ROOT")
-	if root == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return "", nil, fmt.Errorf("resolve home directory: %w", err)
-		}
-		root = filepath.Join(home, ".okf")
+func wantsTopLevelHelp(args []string) bool {
+	if len(args) == 0 {
+		return true
 	}
 	for index := 0; index < len(args); index++ {
-		argument := args[index]
 		switch {
-		case argument == "--root" || argument == "-root":
-			if index+1 >= len(args) {
-				return "", nil, errors.New("--root requires a path")
-			}
-			root = args[index+1]
+		case args[index] == "--root":
 			index++
-		case strings.HasPrefix(argument, "--root="):
-			root = strings.TrimPrefix(argument, "--root=")
-		case argument == "--help" || argument == "-h":
-			return root, []string{"help"}, nil
+		case strings.HasPrefix(args[index], "--root="):
+			// The value is part of this argument.
+		case args[index] == "help":
+			return true
 		default:
-			return root, args[index:], nil
+			return false
 		}
 	}
-	return root, nil, nil
+	return false
+}
+
+func resolveRoot(explicit string, configured ...string) (string, error) {
+	if explicit != "" {
+		return explicit, nil
+	}
+	if root := os.Getenv("MANLY_ROOT"); root != "" {
+		return root, nil
+	}
+	if len(configured) > 0 && configured[0] != "" {
+		return configured[0], nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve home directory: %w", err)
+	}
+	return filepath.Join(home, ".okf"), nil
 }
 
 func loadBundle(root string) (*knowledge.Bundle, error) {
 	return knowledge.Load(root)
-}
-
-func newFlagSet(name string) *flag.FlagSet {
-	flags := flag.NewFlagSet(name, flag.ContinueOnError)
-	flags.SetOutput(os.Stderr)
-	return flags
-}
-
-func normalizeFlagArgs(args []string, valueFlags map[string]bool) []string {
-	var flags []string
-	var positional []string
-	for index := 0; index < len(args); index++ {
-		argument := args[index]
-		if !strings.HasPrefix(argument, "-") || argument == "-" {
-			positional = append(positional, argument)
-			continue
-		}
-		flags = append(flags, argument)
-		name := argument
-		if equals := strings.IndexByte(name, '='); equals >= 0 {
-			name = name[:equals]
-		}
-		if valueFlags[name] && !strings.Contains(argument, "=") && index+1 < len(args) {
-			index++
-			flags = append(flags, args[index])
-		}
-	}
-	return append(flags, positional...)
-}
-
-func runInit(root string, args []string) error {
-	flags := newFlagSet("init")
-	force := flags.Bool("force", false, "allow creation of an existing root index")
-	if err := flags.Parse(args); err != nil {
-		return err
-	}
-	if flags.NArg() != 0 {
-		return errors.New("usage: manly init [--force]")
-	}
-	if err := os.MkdirAll(root, 0o755); err != nil {
-		return fmt.Errorf("create root: %w", err)
-	}
-	indexPath := filepath.Join(root, "index.md")
-	if _, err := os.Stat(indexPath); err == nil && !*force {
-		return fmt.Errorf("root index already exists: %s", indexPath)
-	} else if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("check root index: %w", err)
-	}
-	content := "---\nokf_version: \"0.1\"\n---\n\n# Knowledge Bundle\n\n"
-	if err := os.WriteFile(indexPath, []byte(content), 0o644); err != nil {
-		return fmt.Errorf("write root index: %w", err)
-	}
-	fmt.Printf("Initialized OKF bundle at %s\n", root)
-	return nil
-}
-
-func runEdit(root string, args []string) error {
-	flags := newFlagSet("edit")
-	if err := flags.Parse(args); err != nil {
-		return err
-	}
-	if flags.NArg() != 1 {
-		return errors.New("usage: manly edit <concept-id>")
-	}
-	bundle, err := loadBundle(root)
-	if err != nil {
-		return err
-	}
-	concept, err := bundle.Get(flags.Arg(0))
-	if err != nil {
-		return err
-	}
-	editor := os.Getenv("EDITOR")
-	if editor == "" {
-		return errors.New("EDITOR is not set")
-	}
-	parts := strings.Fields(editor)
-	if len(parts) == 0 {
-		return errors.New("EDITOR is empty")
-	}
-	command := exec.Command(parts[0], append(parts[1:], concept.AbsPath)...)
-	command.Stdin = os.Stdin
-	command.Stdout = os.Stdout
-	command.Stderr = os.Stderr
-	return command.Run()
-}
-
-func printUsage(root string) {
-	fmt.Printf("manly: navigate a global OKF knowledge bundle\n\n"+
-		"Usage:\n"+
-		"  manly [--root PATH] <command> [options]\n\n"+
-		"Root: %s\n\n"+
-		"Commands:\n"+
-		"  init       Initialize an OKF bundle\n"+
-		"  list       List directories or concepts\n"+
-		"  show       Show one concept\n"+
-		"  search     Search concepts\n"+
-		"  context    Retrieve bounded agent context\n"+
-		"  links      Show outgoing links\n"+
-		"  backlinks  Show incoming links\n"+
-		"  graph      Traverse linked concepts\n"+
-		"  add        Create a concept\n"+
-		"  edit       Open a concept in $EDITOR\n"+
-		"  move       Move a concept and update links\n"+
-		"  index      Update marked generated index sections\n"+
-		"  check      Validate the bundle\n\n"+
-		"Output formats:\n"+
-		"  compact, fancy, json, markdown\n",
-		root)
 }
