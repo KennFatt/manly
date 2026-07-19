@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/KennFatt/manly/internal/knowledge"
 )
 
 func TestCLIWorkflow(t *testing.T) {
@@ -61,6 +63,16 @@ func TestCLIWorkflow(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join(root, "a.md"))
 	if err != nil || !strings.Contains(string(data), "group/renamed.md") {
 		t.Fatalf("moved link = %q, %v", data, err)
+	}
+}
+
+func TestWorkspaceDirectoryEntriesSeparateBundleAndDirectory(t *testing.T) {
+	bundle := &knowledge.Bundle{Concepts: []*knowledge.Concept{{RelPath: "general/naming.md"}}}
+
+	entries := workspaceDirectoryEntries(&knowledge.Workspace{}, "engineering-preferences", bundle, []string{"/general"})
+
+	if len(entries) != 1 || entries[0].Path != "/engineering-preferences/general" {
+		t.Fatalf("workspaceDirectoryEntries() = %#v", entries)
 	}
 }
 
