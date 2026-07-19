@@ -65,20 +65,24 @@ func TestCLIWorkflow(t *testing.T) {
 }
 
 func TestCLIArgumentValidation(t *testing.T) {
-	if err := run([]string{"help"}); err != nil {
-		t.Fatalf("help error = %v", err)
+	output, err := captureOutput(t, func() error { return run([]string{"help"}) })
+	if err != nil || !strings.Contains(output, "Commands:") || !strings.Contains(output, "init") {
+		t.Fatalf("help = %q, %v", output, err)
 	}
 	if err := run([]string{"unknown"}); err == nil {
 		t.Fatal("unknown command did not fail")
 	}
-	if _, err := parseFormat("invalid"); err == nil {
-		t.Fatal("parseFormat accepted an invalid format")
+	if err := run([]string{"--root"}); err == nil {
+		t.Fatal("parser accepted a missing root value")
 	}
-	if _, err := parseFormat("human"); err == nil || !strings.Contains(err.Error(), "compact, fancy, json, markdown") {
-		t.Fatalf("parseFormat accepted removed format or omitted available formats: %v", err)
+	if err := run([]string{"show"}); err == nil {
+		t.Fatal("parser accepted a missing concept")
 	}
-	if _, _, err := parseGlobalArgs([]string{"--root"}); err == nil {
-		t.Fatal("parseGlobalArgs accepted a missing root value")
+	if err := run([]string{"add", "/new-concept"}); err == nil {
+		t.Fatal("parser accepted a missing concept type")
+	}
+	if err := run([]string{"--root", t.TempDir(), "list", "--format", "invalid"}); err == nil {
+		t.Fatal("CLI accepted an invalid output format")
 	}
 	if _, err := directoryPrefix("../outside"); err == nil {
 		t.Fatal("directoryPrefix accepted traversal")
@@ -88,19 +92,51 @@ func TestCLIArgumentValidation(t *testing.T) {
 	}
 }
 
+func TestCLIRootPrecedence(t *testing.T) {
+	environmentRoot := t.TempDir()
+	explicitRoot := t.TempDir()
+	t.Setenv("MANLY_ROOT", environmentRoot)
+	if _, err := captureOutput(t, func() error { return run([]string{"init"}) }); err != nil {
+		t.Fatalf("environment root init = %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(environmentRoot, "index.md")); err != nil {
+		t.Fatalf("environment root index: %v", err)
+	}
+	if _, err := captureOutput(t, func() error {
+		return run([]string{"--root", explicitRoot, "init"})
+	}); err != nil {
+		t.Fatalf("explicit root init = %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(explicitRoot, "index.md")); err != nil {
+		t.Fatalf("explicit root index: %v", err)
+	}
+}
+
+func TestCLIVersion(t *testing.T) {
+	output, err := captureOutput(t, func() error { return run([]string{"version"}) })
+	if err != nil {
+		t.Fatalf("version = %q, %v", output, err)
+	}
+	// Direct go build reports "dev" since no linker stamp is applied.
+	if !strings.HasPrefix(output, "manly ") {
+		t.Fatalf("version output %q does not start with 'manly '", output)
+	}
+	if strings.TrimSpace(output) == "manly" {
+		t.Fatalf("version output %q is missing a version value", output)
+	}
+}
+
+func TestCLIVersionNoBundle(t *testing.T) {
+	// Version should succeed without a valid root.
+	result := run([]string{"version"})
+	if result != nil {
+		t.Fatalf("version without bundle = %v", result)
+	}
+}
+
 func TestCLIParsingHelpers(t *testing.T) {
-	t.Setenv("MANLY_ROOT", "/environment-root")
-	root, args, err := parseGlobalArgs([]string{"show", "/concept"})
-	if err != nil || root != "/environment-root" || len(args) != 2 {
-		t.Fatalf("parseGlobalArgs() = %q, %#v, %v", root, args, err)
-	}
-	root, args, err = parseGlobalArgs([]string{"--root=/explicit", "check"})
-	if err != nil || root != "/explicit" || len(args) != 1 || args[0] != "check" {
-		t.Fatalf("explicit parseGlobalArgs() = %q, %#v, %v", root, args, err)
-	}
-	got := normalizeFlagArgs([]string{"query", "--format", "json", "--limit=2"}, map[string]bool{"--format": true, "--limit": true})
-	if strings.Join(got, " ") != "--format json --limit=2 query" {
-		t.Fatalf("normalizeFlagArgs() = %#v", got)
+	if got, err := resolveRoot("/explicit"); err != nil || got != "/explicit" {
+		t.Fatalf("resolveRoot() = %q, %v", got, err)
 	}
 	if got := directoryTitle("type-safe"); got != "Type safe" {
 		t.Fatalf("directoryTitle() = %q", got)

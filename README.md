@@ -174,6 +174,7 @@ The file is the source of truth. `manly` derives search indexes and graph relati
 | `move` | Move a concept and update links |
 | `index` | Update marked generated index sections |
 | `check` | Validate the bundle |
+| `version` | Print the manly executable version |
 
 All read commands support `--format compact|fancy|json|markdown` (default: `compact`).
 
@@ -214,7 +215,10 @@ Build a local binary:
 
 ```bash
 make build
+./manly version   # prints the build-stamped version
 ```
+
+Direct `go build` always reports `dev`. `make build` injects the version derived from Git tags.
 
 Clean the local binary:
 
