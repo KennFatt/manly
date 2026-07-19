@@ -44,7 +44,7 @@ type Directory struct {
 // ListEntry contains one concept and its available actions.
 type ListEntry struct {
 	Concept Concept  `json:"concept"`
-	Actions []Action `json:"actions"`
+	Actions []Action `json:"actions,omitempty"`
 }
 
 // ListView contains directory listing data.
@@ -56,16 +56,20 @@ type ListView struct {
 	Directories []Directory `json:"directories"`
 	Entries     []ListEntry `json:"entries"`
 	Count       int         `json:"count,omitempty"`
+	HideActions bool        `json:"-"`
+	HideUsage   bool        `json:"-"`
 }
 
 func (ListView) view() {}
 
 // ShowView contains one complete concept and its relationships.
 type ShowView struct {
-	Concept   Concept  `json:"concept"`
-	Links     []Link   `json:"links"`
-	Backlinks []Link   `json:"backlinks"`
-	Actions   []Action `json:"actions"`
+	Concept     Concept  `json:"concept"`
+	Links       []Link   `json:"links"`
+	Backlinks   []Link   `json:"backlinks"`
+	Actions     []Action `json:"actions,omitempty"`
+	HideActions bool     `json:"-"`
+	HideUsage   bool     `json:"-"`
 }
 
 func (ShowView) view() {}
@@ -75,7 +79,8 @@ type ShowResult struct {
 	Concept   Concept  `json:"concept"`
 	Links     []Link   `json:"links"`
 	Backlinks []Link   `json:"backlinks"`
-	Actions   []Action `json:"actions"`
+	Actions   []Action `json:"actions,omitempty"`
+	HideUsage bool     `json:"-"`
 }
 
 // ShowCollectionView contains multiple complete concepts and their relationships.

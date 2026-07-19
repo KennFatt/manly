@@ -8,7 +8,7 @@ import (
 
 type CheckCommand struct {
 	Strict bool   `help:"Enable advisory checks."`
-	Format string `default:"compact" help:"Output format."`
+	Format string `default:"${format}" help:"Output format."`
 }
 
 func (command *CheckCommand) Run(app *appContext) error {

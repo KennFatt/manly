@@ -9,7 +9,7 @@ import (
 
 type ShowCommand struct {
 	Concepts []string `arg:"" help:"Concept IDs or directories to show."`
-	Format   string   `default:"compact" help:"Output format."`
+	Format   string   `default:"${format}" help:"Output format."`
 }
 
 func (command *ShowCommand) Run(app *appContext) error {
@@ -27,9 +27,9 @@ func (command *ShowCommand) Run(app *appContext) error {
 			return err
 		}
 		if collection {
-			return renderWorkspaceShowCollection(workspace, refs, format)
+			return renderWorkspaceShowCollection(workspace, refs, format, app.display)
 		}
-		return renderWorkspaceShow(workspace, refs[0], format)
+		return renderWorkspaceShow(workspace, refs[0], format, app.display)
 	}
 	bundle := workspace.Bundles[0]
 	concepts, collection, err := resolveShowConcepts(bundle, command.Concepts)
@@ -37,7 +37,7 @@ func (command *ShowCommand) Run(app *appContext) error {
 		return err
 	}
 	if collection {
-		return renderShowCollection(os.Stdout, bundle, concepts, format)
+		return renderShowCollection(os.Stdout, bundle, concepts, format, app.display)
 	}
 
 	concept := concepts[0]
@@ -45,7 +45,7 @@ func (command *ShowCommand) Run(app *appContext) error {
 	if err != nil {
 		return err
 	}
-	return renderShow(os.Stdout, concept, linkViews(concept.Links), backlinks, format)
+	return renderShow(os.Stdout, concept, linkViews(concept.Links), backlinks, format, app.display)
 }
 
 func resolveShowConcepts(bundle *knowledge.Bundle, arguments []string) ([]*knowledge.Concept, bool, error) {

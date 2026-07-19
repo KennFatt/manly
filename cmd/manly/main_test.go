@@ -112,6 +112,40 @@ func TestCLIRootPrecedence(t *testing.T) {
 	}
 }
 
+func TestCLIConfigDefaultsAndOverrides(t *testing.T) {
+	home := t.TempDir()
+	root := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("MANLY_ROOT", "")
+	configPath := filepath.Join(home, ".config", "manly", "config.yml")
+	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	configYAML := "root: " + root + "\ndefaults:\n  format: json\n  list:\n    recursive: true\ndisplay:\n  actions: false\n  usage: false\n"
+	if err := os.WriteFile(configPath, []byte(configYAML), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := captureOutput(t, func() error { return run([]string{"--root", root, "init"}) }); err != nil {
+		t.Fatal(err)
+	}
+	writeCLIFile(t, root, "nested/note.md", "---\ntype: Note\ntitle: Nested\n---\n\nBody.\n")
+
+	output, err := captureOutput(t, func() error { return run([]string{"list"}) })
+	if err != nil || !strings.Contains(output, `"recursive": true`) || strings.Contains(output, `"actions"`) {
+		t.Fatalf("configured list = %q, %v", output, err)
+	}
+	output, err = captureOutput(t, func() error {
+		return run([]string{"list", "--no-recursive", "--format", "compact"})
+	})
+	if err != nil || !strings.Contains(output, "nested") || strings.Contains(output, "List: manly list") || strings.Contains(output, "Details: manly show") {
+		t.Fatalf("CLI list overrides = %q, %v", output, err)
+	}
+	output, err = captureOutput(t, func() error { return run([]string{"show", "/nested/note"}) })
+	if err != nil || strings.Contains(output, `"actions"`) {
+		t.Fatalf("configured show = %q, %v", output, err)
+	}
+}
+
 func TestCLIVersion(t *testing.T) {
 	output, err := captureOutput(t, func() error { return run([]string{"version"}) })
 	if err != nil {

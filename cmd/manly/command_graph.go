@@ -5,7 +5,7 @@ import "github.com/KennFatt/manly/internal/knowledge"
 type GraphCommand struct {
 	ConceptID string `arg:"" help:"Starting concept ID."`
 	Depth     int    `default:"1" help:"Maximum traversal depth."`
-	Format    string `default:"compact" help:"Output format."`
+	Format    string `default:"${format}" help:"Output format."`
 }
 
 func (command *GraphCommand) Run(app *appContext) error {

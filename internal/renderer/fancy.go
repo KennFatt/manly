@@ -53,7 +53,9 @@ func renderFancyList(w io.Writer, view ListView) error {
 		if entry.Concept.Description != "" {
 			fmt.Fprintf(w, "      %s\n", entry.Concept.Description)
 		}
-		fmt.Fprintf(w, "      Open: manly show %s\n", entry.Concept.ID)
+		if !view.HideActions && !view.HideUsage {
+			fmt.Fprintf(w, "      Open: manly show %s\n", entry.Concept.ID)
+		}
 		if view.Recursive {
 			fmt.Fprintln(w)
 		}
@@ -73,10 +75,12 @@ func renderFancyShowCollection(w io.Writer, view ShowCollectionView) error {
 			fmt.Fprintln(w)
 		}
 		if err := renderFancyShow(w, ShowView{
-			Concept:   result.Concept,
-			Links:     result.Links,
-			Backlinks: result.Backlinks,
-			Actions:   result.Actions,
+			Concept:     result.Concept,
+			Links:       result.Links,
+			Backlinks:   result.Backlinks,
+			Actions:     result.Actions,
+			HideUsage:   result.HideUsage,
+			HideActions: len(result.Actions) == 0,
 		}); err != nil {
 			return err
 		}
@@ -107,11 +111,12 @@ func renderFancyShow(w io.Writer, view ShowView) error {
 		}
 		fmt.Fprintln(w)
 	}
-	fmt.Fprintln(w, "Actions:")
-	renderAction(w, "Open", "manly show "+view.Concept.ID)
-	renderAction(w, "Context", "manly context "+view.Concept.ID)
-	renderAction(w, "Edit", "manly edit "+view.Concept.ID)
-	renderAction(w, "Backlinks", "manly backlinks "+view.Concept.ID)
+	if len(view.Actions) > 0 && !view.HideActions && !view.HideUsage {
+		fmt.Fprintln(w, "Actions:")
+		for _, action := range view.Actions {
+			renderAction(w, strings.Title(action.Name), action.Command)
+		}
+	}
 	return nil
 }
 

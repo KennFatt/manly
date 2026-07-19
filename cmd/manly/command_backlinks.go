@@ -2,7 +2,7 @@ package main
 
 type BacklinksCommand struct {
 	ConceptID string `arg:"" help:"Concept ID."`
-	Format    string `default:"compact" help:"Output format."`
+	Format    string `default:"${format}" help:"Output format."`
 }
 
 func (command *BacklinksCommand) Run(app *appContext) error {

@@ -68,11 +68,13 @@ func renderCompactList(w io.Writer, view ListView) error {
 	for _, row := range rows {
 		fmt.Fprintf(w, "%-*s  %s\n", keyWidth, row.Key, row.Value)
 	}
-	fmt.Fprintln(w)
-	if view.Recursive {
-		fmt.Fprintln(w, "Details: manly show <ID>")
-	} else {
-		fmt.Fprintln(w, "List: manly list <PATH>")
+	if !view.HideUsage {
+		fmt.Fprintln(w)
+		if view.Recursive {
+			fmt.Fprintln(w, "Details: manly show <ID>")
+		} else {
+			fmt.Fprintln(w, "List: manly list <PATH>")
+		}
 	}
 	if view.Root != "" {
 		fmt.Fprintf(w, "Root: %s\n", view.Root)

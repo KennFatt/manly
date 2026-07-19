@@ -81,7 +81,10 @@ func renderLink(link knowledge.Link) linkView {
 	}
 }
 
-func actionViews(id string) []actionView {
+func actionViews(id string, enabled ...bool) []actionView {
+	if len(enabled) > 0 && !enabled[0] {
+		return nil
+	}
 	return []actionView{
 		{Name: "show", Command: "manly show " + id},
 		{Name: "context", Command: "manly context " + id},

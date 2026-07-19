@@ -92,6 +92,25 @@ export MANLY_ROOT="$HOME/knowledge"
 manly init
 ```
 
+## Configuration
+
+On first startup, `manly` creates `$HOME/.config/manly/config.yml` with these defaults:
+
+```yaml
+root: ~/.okf
+
+defaults:
+  format: compact
+  list:
+    recursive: false
+
+display:
+  actions: true
+  usage: true
+```
+
+Edit this file to persist preferences. Configuration is resolved with the precedence `--root > MANLY_ROOT > config.root > ~/.okf`; an explicit format flag overrides `defaults.format`, and `--recursive` or `--no-recursive` overrides the configured list behavior. The file is loaded and validated at startup and is never rewritten after it exists.
+
 Create a concept:
 
 ```bash
@@ -196,7 +215,7 @@ A root that is itself a bundle continues to use local IDs such as `/programming/
 | `check` | Validate the bundle |
 | `version` | Print the manly executable version |
 
-All read commands support `--format compact|fancy|json|markdown` (default: `compact`).
+All read commands support `--format compact|fancy|json|markdown` (default: `compact`, configurable). `list` also supports `--recursive` and `--no-recursive`.
 
 See **[docs/recipe.md](docs/recipe.md)** for complete flag tables, examples, agent workflows, and FAQ.
 

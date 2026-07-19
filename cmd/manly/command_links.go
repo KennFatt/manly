@@ -4,7 +4,7 @@ import "github.com/KennFatt/manly/internal/knowledge"
 
 type LinksCommand struct {
 	ConceptID string `arg:"" help:"Concept ID."`
-	Format    string `default:"compact" help:"Output format."`
+	Format    string `default:"${format}" help:"Output format."`
 }
 
 func (command *LinksCommand) Run(app *appContext) error {
