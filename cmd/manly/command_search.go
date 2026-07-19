@@ -20,15 +20,23 @@ func (command *SearchCommand) Run(app *appContext) error {
 	if err != nil {
 		return err
 	}
-	bundle, err := loadBundle(app.root)
+	workspace, err := loadWorkspace(app.root)
 	if err != nil {
 		return err
 	}
-	results := knowledge.Search(bundle, command.Query, knowledge.SearchOptions{
+	options := knowledge.SearchOptions{
 		Tag:   command.Tag,
 		Type:  command.Type,
 		Path:  command.Path,
 		Limit: command.Limit,
-	})
-	return renderSearchResults(os.Stdout, results, command.Query, format)
+	}
+	if workspace.SingleRoot {
+		results := knowledge.Search(workspace.Bundles[0], command.Query, options)
+		return renderSearchResults(os.Stdout, results, command.Query, format)
+	}
+	results, err := workspace.Search(command.Query, options)
+	if err != nil {
+		return err
+	}
+	return renderWorkspaceSearch(workspace, results, command.Query, format)
 }

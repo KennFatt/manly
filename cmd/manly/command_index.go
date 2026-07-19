@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/KennFatt/manly/internal/knowledge"
 )
@@ -11,7 +12,26 @@ type IndexCommand struct {
 }
 
 func (command *IndexCommand) Run(app *appContext) error {
-	changed, err := knowledge.UpdateIndexes(app.root, command.Check)
+	workspace, err := loadWorkspace(app.root)
+	if err != nil {
+		return err
+	}
+	var changed []string
+	if workspace.SingleRoot {
+		changed, err = knowledge.UpdateIndexes(app.root, command.Check)
+	} else {
+		for _, bundle := range workspace.Bundles {
+			name := workspaceName(workspace, bundle)
+			var bundleChanged []string
+			bundleChanged, err = knowledge.UpdateIndexes(bundle.Root, command.Check)
+			for _, path := range bundleChanged {
+				changed = append(changed, filepath.ToSlash(filepath.Join(name, path)))
+			}
+			if err != nil {
+				break
+			}
+		}
+	}
 	if err != nil {
 		return err
 	}

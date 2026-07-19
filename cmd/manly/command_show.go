@@ -17,10 +17,21 @@ func (command *ShowCommand) Run(app *appContext) error {
 	if err != nil {
 		return err
 	}
-	bundle, err := loadBundle(app.root)
+	workspace, err := loadWorkspace(app.root)
 	if err != nil {
 		return err
 	}
+	if !workspace.SingleRoot {
+		refs, collection, err := resolveWorkspaceConcepts(workspace, command.Concepts)
+		if err != nil {
+			return err
+		}
+		if collection {
+			return renderWorkspaceShowCollection(workspace, refs, format)
+		}
+		return renderWorkspaceShow(workspace, refs[0], format)
+	}
+	bundle := workspace.Bundles[0]
 	concepts, collection, err := resolveShowConcepts(bundle, command.Concepts)
 	if err != nil {
 		return err

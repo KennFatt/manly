@@ -6,7 +6,7 @@ Complete usage patterns for every command. Start at the top or jump to the comma
 
 ## init
 
-Initialize an OKF bundle so `manly` has a home for your concepts.
+Initialize an OKF bundle so `manly` has a home for your concepts. A configured root may also be a workspace containing multiple bundles.
 
 ```
 manly init [--force]
@@ -39,13 +39,45 @@ manly init --force
 
 **What it does**
 
-Creates the root directory as needed, with a minimal `index.md` containing YAML frontmatter (`okf_version: "0.1"`) and a `# Knowledge Bundle` heading. The root must be writable.
+Creates the root directory as needed, with a minimal `index.md` containing YAML frontmatter (`okf_version: "0.1"` and `type: Bundle`) and a `# Knowledge Bundle` heading. The root must be writable.
+
+---
+
+## bundle and workspace roots
+
+`manly` accepts either a single bundle root or a workspace root. A workspace contains independent bundles as direct child directories:
+
+```text
+knowledge/
+├── engineering-preferences/
+│   ├── index.md              # okf_version and type: Bundle
+│   └── react/handler-naming.md
+└── personal-notes/
+    ├── index.md              # okf_version and type: Bundle
+    └── meetings.md
+```
+
+A single-bundle root uses local concept IDs:
+
+```text
+/programming/type-safety
+```
+
+Workspace concept commands require the direct child bundle name:
+
+```text
+/engineering-preferences/react/handler-naming
+```
+
+`list`, `search`, and `check` aggregate across all discovered bundles. Concept-specific commands such as `show`, `context`, `links`, `backlinks`, `graph`, `add`, `edit`, and `move` use the explicit workspace-qualified path. Markdown links remain bundle-local, so a link inside `engineering-preferences` should use `/react/handler-naming.md`, not `/engineering-preferences/react/handler-naming.md`.
+
+A discovered workspace bundle must have parseable frontmatter in its root `index.md` with a non-empty `okf_version` and `type: Bundle`. Discovery is limited to direct child directories.
 
 ---
 
 ## list
 
-List concept-containing directories or concepts in the bundle. This is your primary browsing command.
+List concept-containing directories or concepts in a bundle or workspace. This is your primary browsing command.
 
 ```
 manly list [path] [--recursive] [--format FORMAT]
@@ -61,13 +93,16 @@ If no path is given, `/` (the root) is used.
 **Examples**
 
 ```bash
-# List all top-level concept-containing directories
+# List all top-level concept-containing directories or workspace bundles
 manly list
 
-# List concepts inside /programming
+# List concepts inside /programming in a single bundle
 manly list /programming
 
-# List every concept in the entire bundle
+# List concepts inside one workspace bundle
+manly list /engineering-preferences/react
+
+# List every concept in the entire bundle or workspace
 manly list --recursive
 
 # List concepts in a directory and all subdirectories
@@ -95,7 +130,7 @@ manly list --format markdown
 
 ## show
 
-Read one or more concepts. A directory argument loads all concepts beneath that directory recursively. Each result includes its ID, title, content, links, backlinks, and available actions where supported.
+Read one or more concepts. A directory argument loads all concepts beneath that directory recursively. In workspace mode, concept and directory arguments must include the bundle name. Each result includes its ID, title, content, links, backlinks, and available actions where supported.
 
 ```
 manly show <concept-id-or-directory>... [--format FORMAT]
@@ -110,6 +145,9 @@ manly show <concept-id-or-directory>... [--format FORMAT]
 ```bash
 # Read a concept in compact format (ID + body)
 manly show /programming/go/type-safety
+
+# Read a workspace-qualified concept
+manly show /engineering-preferences/react/handler-naming
 
 # Load every concept under a directory, including nested directories
 manly show /programming --format compact
@@ -138,7 +176,7 @@ manly show /programming/go/type-safety --format markdown
 
 ## search
 
-Search concepts by title, description, tags, path, and body text.
+Search concepts by title, description, tags, path, and body text. In workspace mode, searches aggregate across bundles; use a bundle-qualified `--path` to restrict results to one bundle.
 
 ```
 manly search <query> [--tag TAG] [--type TYPE] [--path PATH] [--limit N] [--format FORMAT]
@@ -163,6 +201,9 @@ manly search "testing" --tag react
 
 # Search within a specific path
 manly search "deployment" --path /engineering
+
+# Search within one workspace bundle
+manly search "handlers" --path /engineering-preferences/react
 
 # Search by concept type
 manly search "architecture" --type "Architecture Decision"
@@ -199,7 +240,7 @@ manly context <query-or-concept-id> [--limit N] [--format FORMAT]
 | `--limit` | int | 5 | Maximum number of concepts to return |
 | `--format` | string | compact | Output format: `compact`, `fancy`, `json`, or `markdown` |
 
-If the argument resolves to an existing concept ID, that concept is returned directly without searching. Otherwise, a full-text search runs with the given limit.
+If the argument resolves to an existing concept ID, that concept is returned directly without searching. Otherwise, a full-text search runs with the given limit. In workspace mode, direct concept retrieval requires a bundle-qualified ID; search and context results are qualified before rendering.
 
 **Examples**
 
@@ -479,7 +520,7 @@ Scans `index.md` files for marked generated-content sections and regenerates the
 
 ## check
 
-Validate the OKF bundle for structural and semantic issues.
+Validate a single OKF bundle or all bundles in a workspace for structural and semantic issues.
 
 ```
 manly check [--strict] [--format FORMAT]
@@ -487,7 +528,7 @@ manly check [--strict] [--format FORMAT]
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--strict` | bool | false | Enable advisory checks (stale indexes, etc.) |
+| `--strict` | bool | false | Enable advisory checks, including stale generated indexes |
 | `--format` | string | compact | Output format: `compact`, `fancy`, `json`, or `markdown` |
 
 **Examples**
@@ -502,7 +543,7 @@ manly check --strict
 # JSON output for CI or automation
 manly check --format json
 
-# Fancy output with readable issue descriptions
+# Fancy output with readable issue descriptions and bundle statistics
 manly check --strict --format fancy
 ```
 
@@ -512,16 +553,36 @@ manly check --strict --format fancy
 - Non-empty concept types
 - Reserved OKF file constraints (`index.md`, `log.md`)
 - Timestamp formats
-- Missing local link targets (reported as warnings; OKF v0.1 requires consumers to tolerate broken links)
+- Missing local link targets, reported as warnings
+- Stale generated indexes when `--strict` is enabled
+
+The command also reports the resolved root, whether it is a `single-bundle` or `workspace` root, discovered bundle count, scanned Markdown files, loaded and invalid concepts, checked and broken links, errors, and warnings.
 
 **Output formats**
 
-- **compact**: Tab-separated `<severity>\t<path>\t<message>` lines. When there are no errors, a validation summary line is printed at the end.
-- **fancy**: Human-readable `ERROR:` and `WARNING:` lines with paths and messages.
-- **json**: Object with `Errors` and `Warnings` arrays.
-- **markdown**: Bullet list with severity prefix.
+- **compact**: Issue lines followed by an aggregate summary containing `Root`, `Mode`, file/concept/link counts, and validation totals.
+- **fancy**: Human-readable issues, a validation summary, and per-bundle statistics.
+- **json**: Structured `root`, `mode`, `stats`, `bundles`, `Errors`, `Warnings`, and `valid` fields. Existing `Errors` and `Warnings` fields are preserved for compatibility.
+- **markdown**: Markdown issue sections, aggregate statistics, and a per-bundle table.
 
-Exit code is non-zero when there are errors.
+Example compact summary:
+
+```text
+Root: /Users/you/knowledge
+Mode: workspace
+Bundles: 2
+Markdown files: 53
+Concept files: 45
+Loaded concepts: 45
+Invalid concept files: 0
+Links checked: 99
+Broken links: 0
+Errors: 0
+Warnings: 0
+OKF validation passed	0 warning(s)
+```
+
+Warnings do not produce a non-zero exit status. Errors do.
 
 ---
 
@@ -612,13 +673,16 @@ Or prefix the command:
 EDITOR="nano" manly edit /concept/id
 ```
 
-### Bundle not found / wrong root
+### Bundle or workspace not found / wrong root
 
 `manly` resolves the root as: `--root` flag > `MANLY_ROOT` env var > `~/.okf`.
 
 ```bash
-# Check which root is active
-manly list          # output includes the resolved root path
+# Check which root and mode are active
+manly check
+
+# Inspect root and workspace statistics as JSON
+manly check --format json | jq '{root, mode, stats}'
 
 # Override for one command
 manly --root ./my-bundle list
@@ -626,6 +690,8 @@ manly --root ./my-bundle list
 # Set persistently
 export MANLY_ROOT=~/Documents/knowledge
 ```
+
+If the root is a workspace, concept-specific commands require the direct child bundle name, for example `/engineering-preferences/react/handler-naming`. Each direct child bundle must contain an `index.md` with `okf_version` and `type: Bundle`.
 
 ### Concept already exists
 
@@ -642,10 +708,10 @@ Run `check` to find broken recognized internal links in bundle Markdown files (e
 
 ```bash
 manly check
-# WARNING\tfile.md\tlink target not found: /missing/concept
+# WARNING\tengineering-preferences/react/file.md\tlink target not found: /missing/concept
 ```
 
-Broken links are reported as warnings. OKF v0.1 requires consumers to tolerate them. Use `move` to fix recognized path mismatches or `edit` to correct the Markdown.
+In a workspace, Markdown links remain bundle-local. For a concept inside `engineering-preferences`, use `/react/handler-naming.md`, not `/engineering-preferences/react/handler-naming.md`. Broken links are reported as warnings. OKF v0.1 requires consumers to tolerate them. Use `move` to fix recognized path mismatches or `edit` to correct the Markdown.
 
 ### Stale generated indexes
 
@@ -667,8 +733,16 @@ manly index
 
 ### How do I retrieve a specific concept?
 
+For a single bundle:
+
 ```bash
 manly show /exact/concept-id
+```
+
+For a workspace, include the bundle directory name:
+
+```bash
+manly show /engineering-preferences/react/handler-naming
 ```
 
 If you want the full context (links, backlinks, actions):
@@ -740,7 +814,7 @@ Add `--format json` to any read command:
 ```bash
 manly list --recursive --format json | jq '.entries[].concept.id'
 manly search "error handling" --format json | jq '.results'
-manly check --format json | jq '.Errors'
+manly check --format json | jq '{root, mode, stats, bundles, errors: .Errors, warnings: .Warnings, valid}'
 ```
 
 ### How do I change a concept's path?
@@ -759,7 +833,7 @@ manly add /path/to/concept --type Note --title "My Title" --description "What th
 
 The file is created immediately with valid frontmatter. Use `manly edit /path/to/concept` later to add body content.
 
-### How do I validate my bundle before sharing it?
+### How do I validate my bundle or workspace before sharing it?
 
 ```bash
 manly check --strict
@@ -785,13 +859,14 @@ manly context "How should I handle errors in TypeScript?" --format json --limit 
 
 Agents get concept bodies, links, and navigation actions. The agent can follow up with `manly show` or `manly links` on any returned ID.
 
-### How do I know which bundle root is active?
+### How do I know which root and mode are active?
 
 ```bash
-manly list     # output includes the resolved root
+manly check
+manly check --format json | jq '{root, mode, stats}'
 ```
 
-### How do I use a different bundle for a single command?
+### How do I use a different bundle or workspace for a single command?
 
 ```bash
 manly --root /path/to/bundle list

@@ -186,11 +186,50 @@ func renderGraph(nodes []knowledge.GraphNode, format outputFormat) error {
 
 func renderCheck(report knowledge.ValidationReport, format outputFormat) error {
 	view := renderer.CheckView{
+		Root:     report.Stats.Root,
+		Mode:     report.Stats.Mode,
+		Stats:    checkStats(report),
+		Bundles:  checkBundles(report.Bundles),
 		Errors:   checkIssues(report.Errors),
 		Warnings: checkIssues(report.Warnings),
 		Valid:    report.Valid(),
 	}
 	return renderOutput(os.Stdout, format, view)
+}
+
+func checkStats(report knowledge.ValidationReport) renderer.CheckStats {
+	return renderer.CheckStats{
+		Bundles:               report.Stats.Bundles,
+		MarkdownFiles:         report.Stats.MarkdownFiles,
+		ReservedFiles:         report.Stats.ReservedFiles,
+		ConceptFiles:          report.Stats.ConceptFiles,
+		LoadedConcepts:        report.Stats.LoadedConcepts,
+		InvalidConceptFiles:   report.Stats.InvalidConceptFiles,
+		LinksChecked:          report.Stats.LinksChecked,
+		BrokenLinks:           report.Stats.BrokenLinks,
+		StaleGeneratedIndexes: report.Stats.StaleGeneratedIndexes,
+		Errors:                len(report.Errors),
+		Warnings:              len(report.Warnings),
+	}
+}
+
+func checkBundles(bundles []knowledge.BundleValidationStats) []renderer.CheckBundle {
+	result := make([]renderer.CheckBundle, 0, len(bundles))
+	for _, bundle := range bundles {
+		result = append(result, renderer.CheckBundle{
+			Name:                  bundle.Name,
+			Root:                  bundle.Root,
+			MarkdownFiles:         bundle.MarkdownFiles,
+			ReservedFiles:         bundle.ReservedFiles,
+			ConceptFiles:          bundle.ConceptFiles,
+			LoadedConcepts:        bundle.LoadedConcepts,
+			InvalidConceptFiles:   bundle.InvalidConceptFiles,
+			LinksChecked:          bundle.LinksChecked,
+			BrokenLinks:           bundle.BrokenLinks,
+			StaleGeneratedIndexes: bundle.StaleGeneratedIndexes,
+		})
+	}
+	return result
 }
 
 func checkIssues(issues []knowledge.Issue) []renderer.Issue {

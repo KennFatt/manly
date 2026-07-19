@@ -152,11 +152,44 @@ type Issue struct {
 	Message string `json:"message"`
 }
 
+// CheckStats contains aggregate validation and scan statistics.
+type CheckStats struct {
+	Bundles               int `json:"bundles"`
+	MarkdownFiles         int `json:"markdown_files"`
+	ReservedFiles         int `json:"reserved_files"`
+	ConceptFiles          int `json:"concept_files"`
+	LoadedConcepts        int `json:"loaded_concepts"`
+	InvalidConceptFiles   int `json:"invalid_concept_files"`
+	LinksChecked          int `json:"links_checked"`
+	BrokenLinks           int `json:"broken_links"`
+	StaleGeneratedIndexes int `json:"stale_generated_indexes"`
+	Errors                int `json:"errors"`
+	Warnings              int `json:"warnings"`
+}
+
+// CheckBundle contains per-bundle validation statistics.
+type CheckBundle struct {
+	Name                  string `json:"name"`
+	Root                  string `json:"root"`
+	MarkdownFiles         int    `json:"markdown_files"`
+	ReservedFiles         int    `json:"reserved_files"`
+	ConceptFiles          int    `json:"concept_files"`
+	LoadedConcepts        int    `json:"loaded_concepts"`
+	InvalidConceptFiles   int    `json:"invalid_concept_files"`
+	LinksChecked          int    `json:"links_checked"`
+	BrokenLinks           int    `json:"broken_links"`
+	StaleGeneratedIndexes int    `json:"stale_generated_indexes"`
+}
+
 // CheckView contains bundle validation results.
 type CheckView struct {
-	Errors   []Issue `json:"Errors"`
-	Warnings []Issue `json:"Warnings"`
-	Valid    bool    `json:"-"`
+	Root     string        `json:"root"`
+	Mode     string        `json:"mode"`
+	Stats    CheckStats    `json:"stats"`
+	Bundles  []CheckBundle `json:"bundles,omitempty"`
+	Errors   []Issue       `json:"Errors"`
+	Warnings []Issue       `json:"Warnings"`
+	Valid    bool          `json:"valid"`
 }
 
 func (CheckView) view() {}

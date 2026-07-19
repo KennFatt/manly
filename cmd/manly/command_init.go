@@ -20,7 +20,7 @@ func (command *InitCommand) Run(app *appContext) error {
 	} else if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("check root index: %w", err)
 	}
-	content := "---\nokf_version: \"0.1\"\n---\n\n# Knowledge Bundle\n\n"
+	content := "---\nokf_version: \"0.1\"\ntype: Bundle\n---\n\n# Knowledge Bundle\n\n"
 	if err := os.WriteFile(indexPath, []byte(content), 0o644); err != nil {
 		return fmt.Errorf("write root index: %w", err)
 	}
