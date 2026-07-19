@@ -315,15 +315,8 @@ func (w *Workspace) Validate(strict bool) (ValidationReport, error) {
 		if err != nil {
 			return report, err
 		}
-		for _, issue := range bundleReport.Errors {
-			issue.Path = filepath.ToSlash(filepath.Join(name, issue.Path))
-			report.Errors = append(report.Errors, issue)
-		}
-		for _, issue := range bundleReport.Warnings {
-			issue.Path = filepath.ToSlash(filepath.Join(name, issue.Path))
-			report.Warnings = append(report.Warnings, issue)
-		}
+		mergeValidationReport(&report, bundleReport, name)
 	}
-	report.Sort()
+	finalizeWorkspaceReport(&report, w.Root)
 	return report, nil
 }

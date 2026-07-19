@@ -61,18 +61,11 @@ func ValidateWorkspaceRoot(root string, strict bool) (ValidationReport, error) {
 			return report, err
 		}
 		bundles++
-		for _, issue := range bundleReport.Errors {
-			issue.Path = filepath.ToSlash(filepath.Join(entry.Name(), issue.Path))
-			report.Errors = append(report.Errors, issue)
-		}
-		for _, issue := range bundleReport.Warnings {
-			issue.Path = filepath.ToSlash(filepath.Join(entry.Name(), issue.Path))
-			report.Warnings = append(report.Warnings, issue)
-		}
+		mergeValidationReport(&report, bundleReport, entry.Name())
 	}
 	if bundles == 0 {
 		return report, fmt.Errorf("workspace contains no bundles")
 	}
-	report.Sort()
+	finalizeWorkspaceReport(&report, resolvedRoot)
 	return report, nil
 }
