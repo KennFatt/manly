@@ -92,9 +92,12 @@ func (ShowCollectionView) view() {}
 
 // SearchResult contains one scored search result.
 type SearchResult struct {
-	Concept Concept  `json:"concept"`
-	Score   float64  `json:"score"`
-	Actions []Action `json:"actions"`
+	Concept       Concept  `json:"concept"`
+	Score         float64  `json:"score"`
+	MatchedFields []string `json:"matched_fields,omitempty"`
+	MatchedTerms  []string `json:"matched_terms,omitempty"`
+	MatchedRank   string   `json:"matched_rank,omitempty"`
+	Actions       []Action `json:"actions"`
 }
 
 // SearchView contains search results for a query.
@@ -107,10 +110,13 @@ func (SearchView) view() {}
 
 // ContextResult contains one context concept and its links.
 type ContextResult struct {
-	Concept Concept  `json:"concept"`
-	Score   float64  `json:"score"`
-	Links   []Link   `json:"links"`
-	Actions []Action `json:"actions"`
+	Concept       Concept  `json:"concept"`
+	Score         float64  `json:"score"`
+	MatchedFields []string `json:"matched_fields,omitempty"`
+	MatchedTerms  []string `json:"matched_terms,omitempty"`
+	MatchedRank   string   `json:"matched_rank,omitempty"`
+	Links         []Link   `json:"links"`
+	Actions       []Action `json:"actions"`
 }
 
 // ContextView contains bounded context results for a query.

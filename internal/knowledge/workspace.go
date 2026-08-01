@@ -28,6 +28,7 @@ type SearchResultRef struct {
 	BundleName string
 	Concept    *Concept
 	Score      float64
+	Match      Match
 }
 
 // LoadWorkspace loads root as one bundle or discovers its direct child bundles.
@@ -298,7 +299,7 @@ func (w *Workspace) Search(query string, options SearchOptions) ([]SearchResultR
 func searchRefs(name string, results []SearchResult) []SearchResultRef {
 	refs := make([]SearchResultRef, 0, len(results))
 	for _, result := range results {
-		refs = append(refs, SearchResultRef{BundleName: name, Concept: result.Concept, Score: result.Score})
+		refs = append(refs, SearchResultRef{BundleName: name, Concept: result.Concept, Score: result.Score, Match: result.Match})
 	}
 	return refs
 }

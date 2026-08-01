@@ -135,9 +135,12 @@ func searchResults(results []knowledge.SearchResult) []renderer.SearchResult {
 	views := make([]renderer.SearchResult, 0, len(results))
 	for _, result := range results {
 		views = append(views, renderer.SearchResult{
-			Concept: viewConcept(result.Concept, false),
-			Score:   result.Score,
-			Actions: actionViews(result.Concept.ID),
+			Concept:       viewConcept(result.Concept, false),
+			Score:         result.Score,
+			MatchedFields: result.Match.MatchedFields,
+			MatchedTerms:  result.Match.MatchedTerms,
+			MatchedRank:   result.Match.Rank.String(),
+			Actions:       actionViews(result.Concept.ID),
 		})
 	}
 	return views
@@ -153,10 +156,13 @@ func contextResults(results []knowledge.SearchResult) []renderer.ContextResult {
 			}
 		}
 		views = append(views, renderer.ContextResult{
-			Concept: viewConcept(result.Concept, true),
-			Score:   result.Score,
-			Links:   links,
-			Actions: actionViews(result.Concept.ID),
+			Concept:       viewConcept(result.Concept, true),
+			Score:         result.Score,
+			MatchedFields: result.Match.MatchedFields,
+			MatchedTerms:  result.Match.MatchedTerms,
+			MatchedRank:   result.Match.Rank.String(),
+			Links:         links,
+			Actions:       actionViews(result.Concept.ID),
 		})
 	}
 	return views
