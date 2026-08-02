@@ -23,6 +23,9 @@ func TestLoadBootstrapsDefaults(t *testing.T) {
 	if !result.Display.Actions || !result.Display.Usage {
 		t.Fatalf("display = %#v", result.Display)
 	}
+	if !result.Analytics.Enabled || result.Analytics.Provider != "sqlite" {
+		t.Fatalf("analytics = %#v", result.Analytics)
+	}
 	if _, err := os.Stat(filepath.Join(home, ".config", "manly", "config.yml")); err != nil {
 		t.Fatalf("bootstrapped config: %v", err)
 	}
@@ -49,6 +52,9 @@ func TestLoadMergesPartialConfigWithoutRewriting(t *testing.T) {
 	if result.Defaults.List.Recursive || result.Display.Actions || !result.Display.Usage {
 		t.Fatalf("merged defaults/display = %#v / %#v", result.Defaults, result.Display)
 	}
+	if !result.Analytics.Enabled || result.Analytics.Provider != "sqlite" {
+		t.Fatalf("merged analytics = %#v", result.Analytics)
+	}
 	got, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
@@ -67,6 +73,7 @@ func TestLoadRejectsInvalidConfig(t *testing.T) {
 		{"malformed yaml", "display: [", "load"},
 		{"unknown key", "display:\n  actions: true\n  typo: false\n", "decode"},
 		{"invalid format", "defaults:\n  format: terminal\n", "defaults.format"},
+		{"invalid analytics provider", "analytics:\n  provider: database\n", "analytics.provider"},
 		{"empty root", "root: ''\n", "root"},
 	}
 	for _, test := range tests {
