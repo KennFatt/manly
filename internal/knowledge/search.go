@@ -15,10 +15,13 @@ type SearchOptions struct {
 
 // Match records why a concept matched a query. It is the search evidence
 // exposed in rendered JSON as matched_fields, matched_terms, and matched_rank.
+// Coverage is the fraction of query tokens that matched (0..1) and feeds the
+// confidence tier, so a single tag hit on a three-token query is not medium.
 type Match struct {
 	MatchedFields []string
 	MatchedTerms  []string
 	Rank          ScoreRank
+	Coverage      float64
 }
 
 type SearchResult struct {
@@ -54,7 +57,7 @@ var stopWords = map[string]bool{
 	"both": true, "down": true, "during": true, "each": true, "few": true,
 	"further": true, "more": true, "most": true, "other": true, "over": true,
 	"same": true, "some": true, "such": true, "under": true, "until": true,
-	"very": true, "while": true, "yet": true,
+	"very": true, "while": true, "yet": true, "new": true,
 }
 
 // ScoreRank is the semantic class of a match, ordered from strongest to
@@ -156,20 +159,32 @@ func (c Confidence) String() string {
 	return "unknown"
 }
 
-// Confidence returns the semantic confidence tier of the rank: high for exact
-// and phrase matches, medium for structured metadata, low for weak lexical
-// matches. The CLI uses the tier to flag results that should not be treated
-// as authoritative context.
-func (r ScoreRank) Confidence() Confidence {
+// Confidence returns the semantic confidence tier of a match: high for exact
+// and phrase matches and full-coverage metadata matches; medium for metadata
+// matches covering more than half of the query tokens and description matches
+// covering all of them; low for weak lexical matches and sparse hits.
+// Coverage-aware tiers prevent a single tag or title hit on a multi-token
+// query from masquerading as a confident match.
+func (r ScoreRank) Confidence(coverage float64) Confidence {
 	switch r {
 	case RankExactID, RankTitlePhrase, RankDescriptionPhrase:
 		return ConfidenceHigh
 	case RankTitle, RankTag:
-		return ConfidenceMedium
-	case RankDescription, RankID, RankBody:
+		if coverage >= 1.0 {
+			return ConfidenceHigh
+		}
+		if coverage > 0.5 {
+			return ConfidenceMedium
+		}
+		return ConfidenceLow
+	case RankDescription:
+		if coverage >= 1.0 {
+			return ConfidenceMedium
+		}
+		return ConfidenceLow
+	default: // RankID, RankBody
 		return ConfidenceLow
 	}
-	return ConfidenceLow
 }
 
 // stronger returns the semantically stronger of two ranks. Enum values are
@@ -193,6 +208,7 @@ func Search(bundle *Bundle, query string, options SearchOptions) []SearchResult 
 				MatchedFields: []string{"id"},
 				MatchedTerms:  []string{concept.ID},
 				Rank:          RankExactID,
+				Coverage:      1.0,
 			},
 		}}
 	}
@@ -359,7 +375,7 @@ func scoreConcept(concept *Concept, tokens []string, phrase string) (float64, Ma
 			matchedFields = append(matchedFields, field)
 		}
 	}
-	return score, Match{MatchedFields: matchedFields, MatchedTerms: matchedTerms, Rank: top}
+	return score, Match{MatchedFields: matchedFields, MatchedTerms: matchedTerms, Rank: top, Coverage: float64(len(matchedTerms)) / float64(len(tokens))}
 }
 
 // tokenMatches reports whether query and index tokens refer to the same word.

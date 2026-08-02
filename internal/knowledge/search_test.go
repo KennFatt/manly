@@ -284,22 +284,88 @@ func TestSearchReportsMatchedFieldsAndTerms(t *testing.T) {
 
 func TestScoreRankConfidence(t *testing.T) {
 	tests := []struct {
-		rank ScoreRank
-		want Confidence
+		rank     ScoreRank
+		coverage float64
+		want     Confidence
 	}{
-		{RankExactID, ConfidenceHigh},
-		{RankTitlePhrase, ConfidenceHigh},
-		{RankDescriptionPhrase, ConfidenceHigh},
-		{RankTitle, ConfidenceMedium},
-		{RankTag, ConfidenceMedium},
-		{RankDescription, ConfidenceLow},
-		{RankID, ConfidenceLow},
-		{RankBody, ConfidenceLow},
+		// Exact and phrase ranks are always high.
+		{RankExactID, 0, ConfidenceHigh},
+		{RankTitlePhrase, 0.33, ConfidenceHigh},
+		{RankDescriptionPhrase, 0, ConfidenceHigh},
+		// Full token coverage upgrades metadata matches to high.
+		{RankTitle, 1.0, ConfidenceHigh},
+		{RankTag, 1.0, ConfidenceHigh},
+		// Partial coverage stays medium for structured metadata.
+		{RankTitle, 0.66, ConfidenceMedium},
+		// Half coverage or less drops metadata matches to low.
+		{RankTag, 0.5, ConfidenceLow},
+		{RankTitle, 0.33, ConfidenceLow},
+		{RankTag, 0.49, ConfidenceLow},
+		// A description covering the whole query is medium, not high.
+		{RankDescription, 1.0, ConfidenceMedium},
+		{RankDescription, 0.5, ConfidenceLow},
+		// Weak lexical ranks stay low even with full coverage.
+		{RankID, 1.0, ConfidenceLow},
+		{RankBody, 1.0, ConfidenceLow},
 	}
 	for _, test := range tests {
-		if got := test.rank.Confidence(); got != test.want {
-			t.Fatalf("rank %v Confidence() = %v, want %v", test.rank, got, test.want)
+		if got := test.rank.Confidence(test.coverage); got != test.want {
+			t.Fatalf("rank %v coverage %.2f Confidence() = %v, want %v", test.rank, test.coverage, got, test.want)
 		}
+	}
+}
+
+func TestSearchCoverageAwareConfidence(t *testing.T) {
+	bundle := searchFixture(t)
+
+	// Full coverage: a title match on every query token is high confidence.
+	results := Search(bundle, "mermaid diagram", SearchOptions{Limit: 5})
+	if len(results) == 0 || results[0].Concept.ID != "/references/mermaid-flowcharts" {
+		t.Fatalf("Search(mermaid diagram) top result = %v, want mermaid-flowcharts", results)
+	}
+	match := results[0].Match
+	if match.Coverage != 1.0 {
+		t.Fatalf("Search(mermaid diagram) coverage = %v, want 1.0", match.Coverage)
+	}
+	if got := match.Rank.Confidence(match.Coverage); got != ConfidenceHigh {
+		t.Fatalf("Search(mermaid diagram) confidence = %v, want high", got)
+	}
+
+	// Two of three tokens matched in the title: medium confidence.
+	results = Search(bundle, "task management pasta", SearchOptions{Limit: 5})
+	var taskResult *SearchResult
+	for index := range results {
+		if results[index].Concept.ID == "/references/task-management" {
+			taskResult = &results[index]
+			break
+		}
+	}
+	if taskResult == nil {
+		t.Fatal("Search(task management pasta) did not return task-management")
+	}
+	if taskResult.Match.Coverage != 2.0/3.0 {
+		t.Fatalf("Search(task management pasta) coverage = %v, want 2/3", taskResult.Match.Coverage)
+	}
+	if got := taskResult.Match.Rank.Confidence(taskResult.Match.Coverage); got != ConfidenceMedium {
+		t.Fatalf("Search(task management pasta) confidence = %v, want medium", got)
+	}
+
+	// One of three tokens matched: the tag hit is demoted to low.
+	results = Search(bundle, "task decisions pasta", SearchOptions{Limit: 5})
+	for index := range results {
+		if results[index].Concept.ID == "/references/task-management" {
+			taskResult = &results[index]
+			break
+		}
+	}
+	if taskResult == nil {
+		t.Fatal("Search(task decisions pasta) did not return task-management")
+	}
+	if taskResult.Match.Coverage != 1.0/3.0 {
+		t.Fatalf("Search(task decisions pasta) coverage = %v, want 1/3", taskResult.Match.Coverage)
+	}
+	if got := taskResult.Match.Rank.Confidence(taskResult.Match.Coverage); got != ConfidenceLow {
+		t.Fatalf("Search(task decisions pasta) confidence = %v, want low", got)
 	}
 }
 
