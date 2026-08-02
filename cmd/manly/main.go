@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/KennFatt/manly/internal/analytics"
 	"github.com/KennFatt/manly/internal/config"
 	"github.com/KennFatt/manly/internal/knowledge"
 )
@@ -23,6 +24,10 @@ func run(args []string) error {
 		return fmt.Errorf("resolve home directory: %w", err)
 	}
 	resolvedConfig, err := config.Load(home)
+	if err != nil {
+		return err
+	}
+	configPath, err := config.FilePath(home)
 	if err != nil {
 		return err
 	}
@@ -57,7 +62,18 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
-	return context.Run(&appContext{root: root, display: resolvedConfig.Display})
+	analyticsService := analytics.New(analytics.Settings{
+		Enabled:   resolvedConfig.Analytics.Enabled,
+		Provider:  analytics.Provider(resolvedConfig.Analytics.Provider),
+		Directory: filepath.Dir(configPath),
+	})
+	defer func() { _ = analyticsService.Close() }()
+	return context.Run(&appContext{
+		root:              root,
+		display:           resolvedConfig.Display,
+		analyticsRecorder: analyticsService,
+		analyticsReader:   analyticsService,
+	})
 }
 
 func wantsTopLevelHelp(args []string) bool {

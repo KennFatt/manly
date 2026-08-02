@@ -25,13 +25,18 @@ defaults:
 display:
   actions: true
   usage: true
+
+analytics:
+  enabled: true
+  provider: sqlite
 `
 
 // Config is the validated runtime configuration for one invocation.
 type Config struct {
-	Root     string   `koanf:"root"`
-	Defaults Defaults `koanf:"defaults"`
-	Display  Display  `koanf:"display"`
+	Root      string    `koanf:"root"`
+	Defaults  Defaults  `koanf:"defaults"`
+	Display   Display   `koanf:"display"`
+	Analytics Analytics `koanf:"analytics"`
 }
 
 // Defaults contains command defaults.
@@ -51,24 +56,47 @@ type Display struct {
 	Usage   bool `koanf:"usage"`
 }
 
+// Analytics controls local concept-usage recording and reporting.
+type Analytics struct {
+	Enabled  bool   `koanf:"enabled"`
+	Provider string `koanf:"provider"`
+}
+
+// FilePath returns the resolved user configuration path for home.
+func FilePath(home string) (string, error) {
+	absoluteHome, err := resolveHome(home)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(absoluteHome, ".config", "manly", "config.yml"), nil
+}
+
+func resolveHome(home string) (string, error) {
+	if strings.TrimSpace(home) == "" {
+		return "", errors.New("config: home directory is empty")
+	}
+	absoluteHome, err := filepath.Abs(home)
+	if err != nil {
+		return "", fmt.Errorf("config: resolve home directory: %w", err)
+	}
+	return absoluteHome, nil
+}
+
 // Load resolves and loads the user's configuration. A missing configuration
 // is bootstrapped with the built-in defaults; an existing file is never
 // rewritten.
 func Load(home string) (Config, error) {
-	if strings.TrimSpace(home) == "" {
-		return Config{}, errors.New("config: home directory is empty")
-	}
-	home, err := filepath.Abs(home)
+	absoluteHome, err := resolveHome(home)
 	if err != nil {
-		return Config{}, fmt.Errorf("config: resolve home directory: %w", err)
+		return Config{}, err
 	}
-	path := filepath.Join(home, ".config", "manly", "config.yml")
+	path := filepath.Join(absoluteHome, ".config", "manly", "config.yml")
 	if err := ensureFile(path); err != nil {
 		return Config{}, fmt.Errorf("config %s: %w", path, err)
 	}
 
 	k := koanf.New(".")
-	if err := setDefaults(k, home); err != nil {
+	if err := setDefaults(k, absoluteHome); err != nil {
 		return Config{}, fmt.Errorf("config %s: set defaults: %w", path, err)
 	}
 	if err := k.Load(file.Provider(path), yaml.Parser()); err != nil {
@@ -88,7 +116,7 @@ func Load(home string) (Config, error) {
 	if err := validate(&result); err != nil {
 		return Config{}, fmt.Errorf("config %s: %w", path, err)
 	}
-	result.Root = expandHome(result.Root, home)
+	result.Root = expandHome(result.Root, absoluteHome)
 	return result, nil
 }
 
@@ -99,6 +127,8 @@ func setDefaults(k *koanf.Koanf, home string) error {
 		"defaults.list.recursive": false,
 		"display.actions":         true,
 		"display.usage":           true,
+		"analytics.enabled":       true,
+		"analytics.provider":      "sqlite",
 	}
 	for key, value := range defaults {
 		if err := k.Set(key, value); err != nil {
@@ -118,6 +148,13 @@ func validate(result *Config) error {
 	}
 	if strings.TrimSpace(result.Root) == "" {
 		return errors.New("root: value must not be empty")
+	}
+	result.Analytics.Provider = strings.ToLower(strings.TrimSpace(result.Analytics.Provider))
+	switch result.Analytics.Provider {
+	case "sqlite", "csv":
+		// Supported analytics provider.
+	default:
+		return fmt.Errorf("analytics.provider: unsupported provider %q (want sqlite or csv)", result.Analytics.Provider)
 	}
 	return nil
 }

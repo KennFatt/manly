@@ -34,6 +34,8 @@ func (fancyRenderer) Render(w io.Writer, view View) error {
 		return renderFancyGraph(w, value)
 	case CheckView:
 		return renderFancyCheck(w, value)
+	case AnalyticsView:
+		return renderFancyAnalytics(w, value)
 	default:
 		return unsupportedView(view)
 	}

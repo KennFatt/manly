@@ -9,7 +9,7 @@ man    -> read documentation for a command
 manly  -> read and navigate a knowledge concept
 ```
 
-Markdown remains the source of truth. There is no hosted service, required database, or embedded AI model.
+Markdown remains the source of truth. There is no hosted service, required database, or embedded AI model. Optional local usage analytics can be stored as SQLite or CSV.
 
 ## Why manly?
 
@@ -20,6 +20,7 @@ Important knowledge is often scattered across notes, project folders, chat histo
 - navigable links between concepts
 - backlinks and graph traversal
 - structured context for LLM agents
+- local concept-usage analytics with SQLite or CSV providers
 - validation for Markdown and YAML frontmatter
 - safe commands for adding, editing, and moving concepts
 
@@ -107,9 +108,13 @@ defaults:
 display:
   actions: true
   usage: true
+
+analytics:
+  enabled: true
+  provider: sqlite
 ```
 
-Edit this file to persist preferences. Configuration is resolved with the precedence `--root > MANLY_ROOT > config.root > ~/.okf`; an explicit format flag overrides `defaults.format`, and `--recursive` or `--no-recursive` overrides the configured list behavior. The file is loaded and validated at startup and is never rewritten after it exists.
+Edit this file to persist preferences. Configuration is resolved with the precedence `--root > MANLY_ROOT > config.root > ~/.okf`; an explicit format flag overrides `defaults.format`, and `--recursive` or `--no-recursive` overrides the configured list behavior. Analytics is enabled by default and uses `analytics.db` beside this configuration file; set `provider: csv` to use `analytics.csv`, or set `enabled: false` to disable recording. Analytics records only successful full-content `show` and `context` retrievals. The file is loaded and validated at startup and is never rewritten after it exists.
 
 Create a concept:
 
@@ -205,6 +210,7 @@ A root that is itself a bundle continues to use local IDs such as `/programming/
 | `show` | Show concepts or recursively load a concept directory |
 | `search` | Search concepts |
 | `context` | Retrieve bounded agent context |
+| `analytics` | Summarize local concept-usage analytics |
 | `links` | Show outgoing links |
 | `backlinks` | Show incoming links |
 | `graph` | Traverse linked concepts |
@@ -215,7 +221,16 @@ A root that is itself a bundle continues to use local IDs such as `/programming/
 | `check` | Validate the bundle |
 | `version` | Print the manly executable version |
 
-All read commands support `--format compact|fancy|json|markdown` (default: `compact`, configurable). `list` additionally supports the machine-oriented `--format agent` catalog output. `list` also supports `--recursive` and `--no-recursive`.
+All read commands, including `analytics`, support `--format compact|fancy|json|markdown` (default: `compact`, configurable). `list` additionally supports the machine-oriented `--format agent` catalog output. `list` also supports `--recursive` and `--no-recursive`.
+
+### Analytics
+
+```bash
+manly analytics
+manly analytics --limit 10 --since 7d --format json
+```
+
+Analytics reports total concept loads, retrieval batches, entry-point counts, top concepts, and recent batches. It records no query text or concept content. `--limit` applies to both top concepts and recent batches; `--since` accepts durations such as `24h` or `7d`. Analytics storage is local to the configuration directory and can be disabled in `config.yml`.
 
 See **[docs/recipe.md](docs/recipe.md)** for complete flag tables, examples, agent workflows, and FAQ.
 

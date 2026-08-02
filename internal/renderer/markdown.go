@@ -35,6 +35,8 @@ func (markdownRenderer) Render(w io.Writer, view View) error {
 		return renderMarkdownGraph(w, value)
 	case CheckView:
 		return renderMarkdownCheck(w, value)
+	case AnalyticsView:
+		return renderMarkdownAnalytics(w, value)
 	default:
 		return unsupportedView(view)
 	}

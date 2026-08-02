@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"github.com/KennFatt/manly/internal/analytics"
 	"github.com/KennFatt/manly/internal/knowledge"
 )
 
@@ -63,5 +64,13 @@ func (command *ContextCommand) Run(app *appContext) error {
 	if len(results) > command.Limit && command.Limit > 0 {
 		results = results[:command.Limit]
 	}
-	return renderContextResults(os.Stdout, workspace, results, query, format)
+	if err := renderContextResults(os.Stdout, workspace, results, query, format); err != nil {
+		return err
+	}
+	ids := make([]string, 0, len(results))
+	for _, result := range results {
+		ids = append(ids, result.Concept.ID)
+	}
+	recordConceptLoads(app.analyticsRecorder, analytics.EntryPointContext, ids)
+	return nil
 }

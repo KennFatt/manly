@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/KennFatt/manly/internal/analytics"
 	"github.com/KennFatt/manly/internal/knowledge"
 )
 
@@ -27,9 +28,17 @@ func (command *ShowCommand) Run(app *appContext) error {
 			return err
 		}
 		if collection {
-			return renderWorkspaceShowCollection(workspace, refs, format, app.display)
+			if err := renderWorkspaceShowCollection(workspace, refs, format, app.display); err != nil {
+				return err
+			}
+			recordConceptLoads(app.analyticsRecorder, analytics.EntryPointShow, workspaceConceptIDs(workspace, refs))
+			return nil
 		}
-		return renderWorkspaceShow(workspace, refs[0], format, app.display)
+		if err := renderWorkspaceShow(workspace, refs[0], format, app.display); err != nil {
+			return err
+		}
+		recordConceptLoads(app.analyticsRecorder, analytics.EntryPointShow, workspaceConceptIDs(workspace, refs[:1]))
+		return nil
 	}
 	bundle := workspace.Bundles[0]
 	concepts, collection, err := resolveShowConcepts(bundle, command.Concepts)
@@ -37,7 +46,11 @@ func (command *ShowCommand) Run(app *appContext) error {
 		return err
 	}
 	if collection {
-		return renderShowCollection(os.Stdout, bundle, concepts, format, app.display)
+		if err := renderShowCollection(os.Stdout, bundle, concepts, format, app.display); err != nil {
+			return err
+		}
+		recordConceptLoads(app.analyticsRecorder, analytics.EntryPointShow, conceptIDs(concepts))
+		return nil
 	}
 
 	concept := concepts[0]
@@ -45,7 +58,11 @@ func (command *ShowCommand) Run(app *appContext) error {
 	if err != nil {
 		return err
 	}
-	return renderShow(os.Stdout, concept, linkViews(concept.Links), backlinks, format, app.display)
+	if err := renderShow(os.Stdout, concept, linkViews(concept.Links), backlinks, format, app.display); err != nil {
+		return err
+	}
+	recordConceptLoads(app.analyticsRecorder, analytics.EntryPointShow, []string{concept.ID})
+	return nil
 }
 
 func resolveShowConcepts(bundle *knowledge.Bundle, arguments []string) ([]*knowledge.Concept, bool, error) {

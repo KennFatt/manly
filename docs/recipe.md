@@ -39,9 +39,13 @@ defaults:
 display:
   actions: true
   usage: true
+
+analytics:
+  enabled: true
+  provider: sqlite
 ```
 
-The precedence for the bundle root is `--root > MANLY_ROOT > config.root > ~/.okf`. The configured format applies to `list`, `show`, `search`, `context`, `links`, `backlinks`, `graph`, and `check`; each command's `--format` flag overrides it. `--recursive` and `--no-recursive` override `defaults.list.recursive`. `display.actions` controls list/show action data and human-readable list/show action commands, while `display.usage` controls list usage hints and human-readable show action commands. Existing configuration files are read without rewriting and invalid configuration fails startup.
+The precedence for the bundle root is `--root > MANLY_ROOT > config.root > ~/.okf`. The configured format applies to `list`, `show`, `search`, `context`, `analytics`, `links`, `backlinks`, `graph`, and `check`; each command's `--format` flag overrides it. `--recursive` and `--no-recursive` override `defaults.list.recursive`. `display.actions` controls list/show action data and human-readable list/show action commands, while `display.usage` controls list usage hints and human-readable show action commands. Analytics is enabled by default and stores `analytics.db` beside `config.yml`; use `provider: csv` for `analytics.csv`, or `enabled: false` to disable it. Only successful full-content `show` and `context` retrievals are recorded. Existing configuration files are read without rewriting and invalid configuration fails startup.
 
 **Examples**
 
@@ -298,6 +302,32 @@ manly show /matched/concept-id --format json     # dive deeper
 ```
 
 ---
+
+## analytics
+
+Summarize local concept retrieval usage. Analytics does not capture query text, concept content, or user identity.
+
+```
+manly analytics [--limit N] [--since DURATION] [--format FORMAT]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--limit` | int | 10 | Maximum number of top concepts and recent batches |
+| `--since` | string | (none) | Filter events to a duration such as `24h` or `7d` |
+| `--format` | string | compact | Output format: `compact`, `fancy`, `json`, or `markdown` |
+
+The report includes total concept loads, retrieval batches, average concepts per batch, entry-point counts, top concepts, and recent batches. SQLite and CSV providers expose the same report structure. Switching providers reads the corresponding separate history file and does not migrate existing events.
+
+**Examples**
+
+```bash
+# Show all recorded usage
+manly analytics
+
+# Inspect the last week's usage as JSON
+manly analytics --since 7d --limit 10 --format json
+```
 
 ## links
 
@@ -639,7 +669,7 @@ Prints `manly <version>` and exits. The version value depends on how the binary 
 
 ## Output Formats
 
-All read commands (`list`, `show`, `search`, `context`, `links`, `backlinks`, `graph`, `check`) accept `--format`. The list command additionally accepts the agent-only catalog format.
+All read commands (`list`, `show`, `search`, `context`, `analytics`, `links`, `backlinks`, `graph`, `check`) accept `--format`. The list command additionally accepts the agent-only catalog format.
 
 | Format | Best for |
 |--------|---------|
