@@ -22,9 +22,10 @@ type Match struct {
 }
 
 type SearchResult struct {
-	Concept *Concept
-	Score   float64
-	Match   Match
+	Concept    *Concept
+	Score      float64
+	Match      Match
+	BundleName string
 }
 
 // stopWords are common English function words that carry no retrieval signal.
@@ -126,6 +127,49 @@ func (r ScoreRank) String() string {
 		return "body"
 	}
 	return "unknown"
+}
+
+// Confidence is the semantic confidence tier of a match, ordered from
+// strongest to weakest. The enum value is the tier; String returns its stable
+// wire name for rendered JSON.
+type Confidence int
+
+const (
+	// ConfidenceHigh covers exact and phrase matches.
+	ConfidenceHigh Confidence = iota
+	// ConfidenceMedium covers structured metadata matches.
+	ConfidenceMedium
+	// ConfidenceLow covers weak lexical matches.
+	ConfidenceLow
+)
+
+// String returns the stable machine-readable wire name of the tier.
+func (c Confidence) String() string {
+	switch c {
+	case ConfidenceHigh:
+		return "high"
+	case ConfidenceMedium:
+		return "medium"
+	case ConfidenceLow:
+		return "low"
+	}
+	return "unknown"
+}
+
+// Confidence returns the semantic confidence tier of the rank: high for exact
+// and phrase matches, medium for structured metadata, low for weak lexical
+// matches. The CLI uses the tier to flag results that should not be treated
+// as authoritative context.
+func (r ScoreRank) Confidence() Confidence {
+	switch r {
+	case RankExactID, RankTitlePhrase, RankDescriptionPhrase:
+		return ConfidenceHigh
+	case RankTitle, RankTag:
+		return ConfidenceMedium
+	case RankDescription, RankID, RankBody:
+		return ConfidenceLow
+	}
+	return ConfidenceLow
 }
 
 // stronger returns the semantically stronger of two ranks. Enum values are

@@ -282,6 +282,43 @@ func TestSearchReportsMatchedFieldsAndTerms(t *testing.T) {
 	}
 }
 
+func TestScoreRankConfidence(t *testing.T) {
+	tests := []struct {
+		rank ScoreRank
+		want Confidence
+	}{
+		{RankExactID, ConfidenceHigh},
+		{RankTitlePhrase, ConfidenceHigh},
+		{RankDescriptionPhrase, ConfidenceHigh},
+		{RankTitle, ConfidenceMedium},
+		{RankTag, ConfidenceMedium},
+		{RankDescription, ConfidenceLow},
+		{RankID, ConfidenceLow},
+		{RankBody, ConfidenceLow},
+	}
+	for _, test := range tests {
+		if got := test.rank.Confidence(); got != test.want {
+			t.Fatalf("rank %v Confidence() = %v, want %v", test.rank, got, test.want)
+		}
+	}
+}
+
+func TestConfidenceString(t *testing.T) {
+	tests := []struct {
+		confidence Confidence
+		want       string
+	}{
+		{ConfidenceHigh, "high"},
+		{ConfidenceMedium, "medium"},
+		{ConfidenceLow, "low"},
+	}
+	for _, test := range tests {
+		if got := test.confidence.String(); got != test.want {
+			t.Fatalf("confidence %v String() = %q, want %q", test.confidence, got, test.want)
+		}
+	}
+}
+
 func TestSearchResultsSortedByScore(t *testing.T) {
 	bundle := searchFixture(t)
 	results := Search(bundle, "decisions", SearchOptions{Limit: 5})
