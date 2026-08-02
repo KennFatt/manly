@@ -22,6 +22,16 @@ func renderConceptList(root string, bundle *knowledge.Bundle, concepts []*knowle
 	return renderOutput(os.Stdout, format, view)
 }
 
+func renderAgentConceptList(root string, prefix string, concepts []*knowledge.Concept) error {
+	view := renderer.ListView{
+		Root:      root,
+		Path:      directoryDisplay(prefix),
+		Recursive: true,
+		Entries:   conceptEntries(concepts, false),
+	}
+	return renderOutput(os.Stdout, formatAgent, view)
+}
+
 func renderJSONRecursiveDirectory(w io.Writer, root string, prefix string, directories []string, concepts []*knowledge.Concept, display config.Display) error {
 	view := renderer.ListView{
 		Root:        root,

@@ -15,6 +15,7 @@ const (
 	formatFancy    = renderer.FormatFancy
 	formatJSON     = renderer.FormatJSON
 	formatMarkdown = renderer.FormatMarkdown
+	formatAgent    = renderer.FormatAgent
 )
 
 type conceptView = renderer.Concept

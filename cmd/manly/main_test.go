@@ -31,6 +31,11 @@ func TestCLIWorkflow(t *testing.T) {
 	assertCommandContains(t, root, []string{"list", "--recursive"}, "/a", "/group/b")
 	assertCommandContains(t, root, []string{"list", "--recursive", "--format", "markdown"}, "# Knowledge Bundle", "/group/b.md")
 	assertCommandContains(t, root, []string{"list", "--recursive", "--format", "json"}, `"recursive": true`, `"/group/b"`)
+	assertCommandContains(t, root, []string{"list", "--recursive", "--format", "agent"}, `"concepts"`, `"/group/b"`, `"type"`, `"tags"`)
+	output, err := runCommand(t, root, "list", "--recursive", "--format", "agent")
+	if err != nil || strings.Contains(output, `"root"`) || strings.Contains(output, `"entries"`) || strings.Contains(output, `"actions"`) {
+		t.Fatalf("agent list = %q, %v", output, err)
+	}
 	assertCommandContains(t, root, []string{"list", "/group", "--format", "markdown"}, "# Group", "/group/b.md")
 	assertCommandContains(t, root, []string{"show", "/group", "--format", "compact"}, "/group/b", "/group/nested/c")
 	assertCommandContains(t, root, []string{"show", "/a", "/group/nested/c", "--format", "json"}, `"results"`, `"/a"`, `"/group/nested/c"`)
