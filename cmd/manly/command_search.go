@@ -32,7 +32,7 @@ func (command *SearchCommand) Run(app *appContext) error {
 	}
 	if workspace.SingleRoot {
 		results := knowledge.Search(workspace.Bundles[0], command.Query, options)
-		return renderSearchResults(os.Stdout, results, command.Query, format)
+		return renderSearchResults(os.Stdout, workspace, results, command.Query, format)
 	}
 	results, err := workspace.Search(command.Query, options)
 	if err != nil {

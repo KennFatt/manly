@@ -133,6 +133,8 @@ func renderFancySearch(w io.Writer, view SearchView) error {
 	}
 	if len(view.Results) == 0 {
 		fmt.Fprintln(w, "No matching concepts.")
+	} else if notice := searchNotice(view); notice != "" {
+		fmt.Fprintf(w, "%s.\n", strings.ToUpper(notice[:1])+notice[1:])
 	}
 	return nil
 }
@@ -146,6 +148,8 @@ func renderFancyContext(w io.Writer, view ContextView) error {
 	}
 	if len(view.Results) == 0 {
 		fmt.Fprintln(w, "No matching concepts.")
+	} else if notice := contextNotice(view); notice != "" {
+		fmt.Fprintf(w, "%s.\n", strings.ToUpper(notice[:1])+notice[1:])
 	}
 	return nil
 }

@@ -16,6 +16,37 @@ type Workspace struct {
 	ByName     map[string]*Bundle
 }
 
+// WorkspaceMode describes how a workspace root is interpreted: as one bundle
+// or as a directory of child bundles. The enum value is the mode; String
+// returns its stable wire name for rendered JSON.
+type WorkspaceMode int
+
+const (
+	// ModeWorkspace treats the root as a directory of child bundles.
+	ModeWorkspace WorkspaceMode = iota
+	// ModeSingle treats the root as one bundle.
+	ModeSingle
+)
+
+// String returns the stable machine-readable wire name of the mode.
+func (m WorkspaceMode) String() string {
+	switch m {
+	case ModeWorkspace:
+		return "workspace"
+	case ModeSingle:
+		return "single"
+	}
+	return "unknown"
+}
+
+// Mode reports how this workspace interprets its root.
+func (w *Workspace) Mode() WorkspaceMode {
+	if w.SingleRoot {
+		return ModeSingle
+	}
+	return ModeWorkspace
+}
+
 // ConceptRef identifies a concept together with the bundle that owns it.
 type ConceptRef struct {
 	BundleName string
@@ -28,6 +59,7 @@ type SearchResultRef struct {
 	BundleName string
 	Concept    *Concept
 	Score      float64
+	Match      Match
 }
 
 // LoadWorkspace loads root as one bundle or discovers its direct child bundles.
@@ -298,7 +330,7 @@ func (w *Workspace) Search(query string, options SearchOptions) ([]SearchResultR
 func searchRefs(name string, results []SearchResult) []SearchResultRef {
 	refs := make([]SearchResultRef, 0, len(results))
 	for _, result := range results {
-		refs = append(refs, SearchResultRef{BundleName: name, Concept: result.Concept, Score: result.Score})
+		refs = append(refs, SearchResultRef{BundleName: name, Concept: result.Concept, Score: result.Score, Match: result.Match})
 	}
 	return refs
 }

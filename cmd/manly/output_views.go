@@ -121,23 +121,50 @@ func renderShowCollection(w io.Writer, bundle *knowledge.Bundle, concepts []*kno
 	return renderOutput(w, format, renderer.ShowCollectionView{Results: results})
 }
 
-func renderSearchResults(w io.Writer, results []knowledge.SearchResult, query string, format outputFormat) error {
-	view := renderer.SearchView{Query: query, Results: searchResults(results)}
+func renderSearchResults(w io.Writer, workspace *knowledge.Workspace, results []knowledge.SearchResult, query string, format outputFormat) error {
+	view := renderer.SearchView{
+		Query:     query,
+		Source:    sourceInfo(workspace),
+		Confident: resultsConfident(results),
+		Results:   searchResults(results),
+	}
 	return renderOutput(w, format, view)
 }
 
-func renderContextResults(w io.Writer, results []knowledge.SearchResult, query string, format outputFormat) error {
-	view := renderer.ContextView{Query: query, Results: contextResults(results)}
+func renderContextResults(w io.Writer, workspace *knowledge.Workspace, results []knowledge.SearchResult, query string, format outputFormat) error {
+	view := renderer.ContextView{
+		Query:     query,
+		Source:    sourceInfo(workspace),
+		Confident: resultsConfident(results),
+		Results:   contextResults(results),
+	}
 	return renderOutput(w, format, view)
+}
+
+// sourceInfo describes where results were retrieved from.
+func sourceInfo(workspace *knowledge.Workspace) renderer.SourceInfo {
+	return renderer.SourceInfo{Root: workspace.Root, Mode: workspace.Mode().String()}
+}
+
+// resultsConfident reports whether the strongest result is a high-confidence
+// match. Results must be sorted by descending score, so the first result
+// carries the strongest rank.
+func resultsConfident(results []knowledge.SearchResult) bool {
+	return len(results) > 0 && results[0].Match.Rank.Confidence() == knowledge.ConfidenceHigh
 }
 
 func searchResults(results []knowledge.SearchResult) []renderer.SearchResult {
 	views := make([]renderer.SearchResult, 0, len(results))
 	for _, result := range results {
 		views = append(views, renderer.SearchResult{
-			Concept: viewConcept(result.Concept, false),
-			Score:   result.Score,
-			Actions: actionViews(result.Concept.ID),
+			Concept:       viewConcept(result.Concept, false),
+			Score:         result.Score,
+			MatchedFields: result.Match.MatchedFields,
+			MatchedTerms:  result.Match.MatchedTerms,
+			MatchedRank:   result.Match.Rank.String(),
+			Confidence:    result.Match.Rank.Confidence().String(),
+			Bundle:        result.BundleName,
+			Actions:       actionViews(result.Concept.ID),
 		})
 	}
 	return views
@@ -153,10 +180,15 @@ func contextResults(results []knowledge.SearchResult) []renderer.ContextResult {
 			}
 		}
 		views = append(views, renderer.ContextResult{
-			Concept: viewConcept(result.Concept, true),
-			Score:   result.Score,
-			Links:   links,
-			Actions: actionViews(result.Concept.ID),
+			Concept:       viewConcept(result.Concept, true),
+			Score:         result.Score,
+			MatchedFields: result.Match.MatchedFields,
+			MatchedTerms:  result.Match.MatchedTerms,
+			MatchedRank:   result.Match.Rank.String(),
+			Confidence:    result.Match.Rank.Confidence().String(),
+			Bundle:        result.BundleName,
+			Links:         links,
+			Actions:       actionViews(result.Concept.ID),
 		})
 	}
 	return views

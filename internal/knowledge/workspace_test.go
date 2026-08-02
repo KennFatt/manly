@@ -59,3 +59,42 @@ func TestLoadWorkspacePreservesSingleBundleMode(t *testing.T) {
 		t.Fatalf("ResolveConcept() error = %v", err)
 	}
 }
+
+func TestWorkspaceMode(t *testing.T) {
+	singleRoot := t.TempDir()
+	writeTestFile(t, singleRoot, "index.md", "---\nokf_version: \"0.1\"\ntype: Bundle\n---\n\n# Bundle\n")
+	writeTestConcept(t, singleRoot, "local.md", "Local", "Local concept.")
+	single, err := LoadWorkspace(singleRoot)
+	if err != nil {
+		t.Fatalf("LoadWorkspace(single) error = %v", err)
+	}
+	if got := single.Mode(); got != ModeSingle {
+		t.Fatalf("single root Mode() = %v, want ModeSingle", got)
+	}
+
+	multiRoot := t.TempDir()
+	writeTestFile(t, multiRoot, "prefs/index.md", "---\nokf_version: \"0.1\"\ntype: Bundle\n---\n\n# Prefs\n")
+	writeTestConcept(t, multiRoot, "prefs/local.md", "Local", "Local concept.")
+	multi, err := LoadWorkspace(multiRoot)
+	if err != nil {
+		t.Fatalf("LoadWorkspace(multi) error = %v", err)
+	}
+	if got := multi.Mode(); got != ModeWorkspace {
+		t.Fatalf("multi-bundle root Mode() = %v, want ModeWorkspace", got)
+	}
+}
+
+func TestWorkspaceModeString(t *testing.T) {
+	tests := []struct {
+		mode WorkspaceMode
+		want string
+	}{
+		{ModeWorkspace, "workspace"},
+		{ModeSingle, "single"},
+	}
+	for _, test := range tests {
+		if got := test.mode.String(); got != test.want {
+			t.Fatalf("mode %v String() = %q, want %q", test.mode, got, test.want)
+		}
+	}
+}
