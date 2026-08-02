@@ -28,6 +28,22 @@ func TestCLIProcessWorkflow(t *testing.T) {
 	if result.err != nil || !strings.Contains(result.output, `"id": "/first-note"`) {
 		t.Fatalf("binary search = %q, %v", result.output, result.err)
 	}
+	result = runBinary(t, binary, root, "context", "/first-note", "--format", "json")
+	if result.err != nil || !strings.Contains(result.output, `"confident": true`) || !strings.Contains(result.output, `"confidence": "high"`) {
+		t.Fatalf("binary context exact id = %q, %v", result.output, result.err)
+	}
+	result = runBinary(t, binary, root, "search", "/first-note", "--format", "json")
+	if result.err != nil || !strings.Contains(result.output, `"confident": true`) {
+		t.Fatalf("binary search exact id = %q, %v", result.output, result.err)
+	}
+	result = runBinary(t, binary, root, "context", "first", "--type", "Guideline", "--format", "json")
+	if result.err != nil || !strings.Contains(result.output, `"results": []`) || !strings.Contains(result.output, `"confident": false`) {
+		t.Fatalf("binary context filter = %q, %v", result.output, result.err)
+	}
+	result = runBinary(t, binary, root, "context", "first", "--type", "Note", "--format", "json")
+	if result.err != nil || !strings.Contains(result.output, `"id": "/first-note"`) {
+		t.Fatalf("binary context type filter = %q, %v", result.output, result.err)
+	}
 	result = runBinary(t, binary, root, "check")
 	if result.err != nil || !strings.Contains(result.output, "OKF validation passed") {
 		t.Fatalf("binary check = %q, %v", result.output, result.err)

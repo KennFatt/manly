@@ -239,7 +239,7 @@ func renderWorkspaceSearch(workspace *knowledge.Workspace, results []knowledge.S
 	local := make([]knowledge.SearchResult, 0, len(results))
 	for _, result := range results {
 		concept := displayConcept(workspace, knowledge.ConceptRef{BundleName: result.BundleName, Bundle: workspace.ByName[result.BundleName], Concept: result.Concept})
-		local = append(local, knowledge.SearchResult{Concept: concept, Score: result.Score, Match: result.Match})
+		local = append(local, knowledge.SearchResult{Concept: concept, Score: result.Score, Match: result.Match, BundleName: result.BundleName})
 	}
-	return renderSearchResults(os.Stdout, local, query, format)
+	return renderSearchResults(os.Stdout, workspace, local, query, format)
 }
