@@ -93,3 +93,36 @@ func compactLinkTarget(link Link) string {
 	}
 	return "broken"
 }
+
+// matchNotice returns the trailing status line for search and context views,
+// or an empty string when the results are confidently relevant. It reports an
+// empty result set and runs whose strongest result is not high-confidence, so
+// humans can tell weak matches apart from strong ones.
+func matchNotice(confident bool, resultCount int, topConfidence string) string {
+	switch {
+	case resultCount == 0:
+		return "no concepts matched"
+	case !confident:
+		if topConfidence == "" {
+			return "no confident match"
+		}
+		return "no confident match: strongest result is " + topConfidence + " confidence"
+	}
+	return ""
+}
+
+func searchNotice(view SearchView) string {
+	top := ""
+	if len(view.Results) > 0 {
+		top = view.Results[0].Confidence
+	}
+	return matchNotice(view.Confident, len(view.Results), top)
+}
+
+func contextNotice(view ContextView) string {
+	top := ""
+	if len(view.Results) > 0 {
+		top = view.Results[0].Confidence
+	}
+	return matchNotice(view.Confident, len(view.Results), top)
+}

@@ -117,12 +117,21 @@ func renderCompactSearch(w io.Writer, view SearchView) error {
 			result.Concept.Title,
 		})
 	}
-	return renderCompactTable(w, []string{"SCORE", "ID", "TITLE"}, rows)
+	if err := renderCompactTable(w, []string{"SCORE", "ID", "TITLE"}, rows); err != nil {
+		return err
+	}
+	if notice := searchNotice(view); notice != "" {
+		fmt.Fprintln(w, notice)
+	}
+	return nil
 }
 
 func renderCompactContext(w io.Writer, view ContextView) error {
 	for _, result := range view.Results {
 		fmt.Fprintf(w, "%s\n%s\n\n", result.Concept.ID, strings.TrimSpace(result.Concept.Content))
+	}
+	if notice := contextNotice(view); notice != "" {
+		fmt.Fprintln(w, notice)
 	}
 	return nil
 }

@@ -90,6 +90,12 @@ type ShowCollectionView struct {
 
 func (ShowCollectionView) view() {}
 
+// SourceInfo identifies where results came from.
+type SourceInfo struct {
+	Root string `json:"root"`
+	Mode string `json:"mode"`
+}
+
 // SearchResult contains one scored search result.
 type SearchResult struct {
 	Concept       Concept  `json:"concept"`
@@ -97,13 +103,17 @@ type SearchResult struct {
 	MatchedFields []string `json:"matched_fields,omitempty"`
 	MatchedTerms  []string `json:"matched_terms,omitempty"`
 	MatchedRank   string   `json:"matched_rank,omitempty"`
+	Confidence    string   `json:"confidence,omitempty"`
+	Bundle        string   `json:"bundle,omitempty"`
 	Actions       []Action `json:"actions"`
 }
 
 // SearchView contains search results for a query.
 type SearchView struct {
-	Query   string         `json:"query"`
-	Results []SearchResult `json:"results"`
+	Query     string         `json:"query"`
+	Source    SourceInfo     `json:"source"`
+	Confident bool           `json:"confident"`
+	Results   []SearchResult `json:"results"`
 }
 
 func (SearchView) view() {}
@@ -115,14 +125,18 @@ type ContextResult struct {
 	MatchedFields []string `json:"matched_fields,omitempty"`
 	MatchedTerms  []string `json:"matched_terms,omitempty"`
 	MatchedRank   string   `json:"matched_rank,omitempty"`
+	Confidence    string   `json:"confidence,omitempty"`
+	Bundle        string   `json:"bundle,omitempty"`
 	Links         []Link   `json:"links"`
 	Actions       []Action `json:"actions"`
 }
 
 // ContextView contains bounded context results for a query.
 type ContextView struct {
-	Query   string          `json:"query"`
-	Results []ContextResult `json:"results"`
+	Query     string          `json:"query"`
+	Source    SourceInfo      `json:"source"`
+	Confident bool            `json:"confident"`
+	Results   []ContextResult `json:"results"`
 }
 
 func (ContextView) view() {}

@@ -79,12 +79,21 @@ func renderMarkdownSearch(w io.Writer, view SearchView) error {
 	for _, result := range view.Results {
 		fmt.Fprintf(w, "* [%s](%s.md) - %s\n", result.Concept.Title, result.Concept.ID, result.Concept.Description)
 	}
+	if notice := searchNotice(view); notice != "" {
+		if len(view.Results) > 0 {
+			fmt.Fprintln(w)
+		}
+		fmt.Fprintf(w, "> %s\n", notice)
+	}
 	return nil
 }
 
 func renderMarkdownContext(w io.Writer, view ContextView) error {
 	for _, result := range view.Results {
 		fmt.Fprintf(w, "## %s\n\n%s\n\n", result.Concept.Title, strings.TrimSpace(result.Concept.Content))
+	}
+	if notice := contextNotice(view); notice != "" {
+		fmt.Fprintf(w, "> %s\n", notice)
 	}
 	return nil
 }

@@ -14,14 +14,50 @@ func TestCompactTables(t *testing.T) {
 		{
 			name: "search",
 			view: SearchView{
+				Confident: true,
 				Results: []SearchResult{
-					{Score: 12, Concept: Concept{ID: "/short", Title: "Short"}},
-					{Score: 3.5, Concept: Concept{ID: "/engineering/preferences", Title: "Longer title"}},
+					{Score: 12, Confidence: "high", Concept: Concept{ID: "/short", Title: "Short"}},
+					{Score: 3.5, Confidence: "medium", Concept: Concept{ID: "/engineering/preferences", Title: "Longer title"}},
 				},
 			},
 			want: "SCORE  ID                        TITLE\n" +
 				"12.00  /short                    Short\n" +
 				"3.50   /engineering/preferences  Longer title\n",
+		},
+		{
+			name: "search weak",
+			view: SearchView{
+				Confident: false,
+				Results: []SearchResult{
+					{Score: 4, Confidence: "low", Concept: Concept{ID: "/weak", Title: "Weak match"}},
+				},
+			},
+			want: "SCORE  ID     TITLE\n" +
+				"4.00   /weak  Weak match\n" +
+				"no confident match: strongest result is low confidence\n",
+		},
+		{
+			name: "search medium",
+			view: SearchView{
+				Confident: false,
+				Results: []SearchResult{
+					{Score: 6, Confidence: "medium", Concept: Concept{ID: "/medium", Title: "Title only"}},
+				},
+			},
+			want: "SCORE  ID       TITLE\n" +
+				"6.00   /medium  Title only\n" +
+				"no confident match: strongest result is medium confidence\n",
+		},
+		{
+			name: "context weak",
+			view: ContextView{
+				Confident: false,
+				Results: []ContextResult{
+					{Confidence: "low", Concept: Concept{ID: "/weak", Title: "Weak", Content: "Body."}},
+				},
+			},
+			want: "/weak\nBody.\n\n" +
+				"no confident match: strongest result is low confidence\n",
 		},
 		{
 			name: "links",
@@ -72,7 +108,8 @@ func TestCompactTablesEmpty(t *testing.T) {
 		view View
 		want string
 	}{
-		{name: "search", view: SearchView{}, want: "SCORE  ID  TITLE\n"},
+		{name: "search", view: SearchView{}, want: "SCORE  ID  TITLE\nno concepts matched\n"},
+		{name: "context", view: ContextView{}, want: "no concepts matched\n"},
 		{name: "links", view: LinksView{}, want: "LABEL  TARGET\n"},
 		{name: "backlinks", view: BacklinksView{}, want: "SOURCE  LABEL\n"},
 	}
