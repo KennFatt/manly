@@ -4,14 +4,17 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/KennFatt/manly/internal/analytics"
 	"github.com/KennFatt/manly/internal/config"
 	"github.com/alecthomas/kong"
 )
 
 // appContext contains runtime values shared by command handlers.
 type appContext struct {
-	root    string
-	display config.Display
+	root              string
+	display           config.Display
+	analyticsRecorder analytics.Recorder
+	analyticsReader   analytics.Reader
 }
 
 type cli struct {
@@ -22,6 +25,7 @@ type cli struct {
 	Show      ShowCommand      `cmd help:"Show one or more concepts."`
 	Search    SearchCommand    `cmd help:"Search concepts."`
 	Context   ContextCommand   `cmd help:"Retrieve bounded agent context."`
+	Analytics AnalyticsCommand `cmd help:"Summarize local concept usage."`
 	Links     LinksCommand     `cmd help:"Show outgoing links."`
 	Backlinks BacklinksCommand `cmd help:"Show incoming links."`
 	Graph     GraphCommand     `cmd help:"Traverse linked concepts."`

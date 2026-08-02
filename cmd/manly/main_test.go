@@ -11,6 +11,8 @@ import (
 )
 
 func TestCLIWorkflow(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("MANLY_ROOT", "")
 	root := t.TempDir()
 	if output, err := runCommand(t, root, "init"); err != nil || !strings.Contains(output, "Initialized OKF bundle") {
 		t.Fatalf("init = %q, %v", output, err)
@@ -68,6 +70,70 @@ func TestCLIWorkflow(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join(root, "a.md"))
 	if err != nil || !strings.Contains(string(data), "group/renamed.md") {
 		t.Fatalf("moved link = %q, %v", data, err)
+	}
+}
+
+func TestCLIAnalyticsRecordsSuccessfulFullContentOnly(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("MANLY_ROOT", "")
+	root := t.TempDir()
+	if _, err := runCommand(t, root, "init"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runCommand(t, root, "add", "/one", "--type", "Note", "--title", "One"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runCommand(t, root, "add", "/two", "--type", "Note", "--title", "Two"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runCommand(t, root, "show", "/one", "/two"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runCommand(t, root, "context", "/one"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runCommand(t, root, "search", "one"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runCommand(t, root, "show", "/missing"); err == nil {
+		t.Fatal("missing show unexpectedly succeeded")
+	}
+
+	output, err := runCommand(t, root, "analytics", "--format", "json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, fragment := range []string{
+		`"concept_loads": 3`,
+		`"retrieval_batches": 2`,
+		`"context": 1`,
+		`"show": 2`,
+		`"concept_id": "/one"`,
+		`"concept_id": "/two"`,
+	} {
+		if !strings.Contains(output, fragment) {
+			t.Fatalf("analytics output %q does not contain %q", output, fragment)
+		}
+	}
+}
+
+func TestWorkspaceAnalyticsUsesQualifiedIDs(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("MANLY_ROOT", "")
+	workspace := t.TempDir()
+	bundle := filepath.Join(workspace, "bundle")
+	if _, err := runCommand(t, bundle, "init"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runCommand(t, bundle, "add", "/note", "--type", "Note", "--title", "Note"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runCommand(t, workspace, "show", "/bundle/note"); err != nil {
+		t.Fatal(err)
+	}
+	output, err := runCommand(t, workspace, "analytics", "--format", "json")
+	if err != nil || !strings.Contains(output, `"concept_id": "/bundle/note"`) {
+		t.Fatalf("workspace analytics = %q, %v", output, err)
 	}
 }
 

@@ -9,6 +9,8 @@ import (
 )
 
 func TestCLIProcessWorkflow(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("MANLY_ROOT", "")
 	binary := filepath.Join(t.TempDir(), "manly")
 	build := exec.Command("go", "build", "-o", binary, ".")
 	if output, err := build.CombinedOutput(); err != nil {

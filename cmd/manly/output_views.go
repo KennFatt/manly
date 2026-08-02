@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/KennFatt/manly/internal/analytics"
 	"github.com/KennFatt/manly/internal/config"
 	"github.com/KennFatt/manly/internal/knowledge"
 	"github.com/KennFatt/manly/internal/renderer"
@@ -241,6 +242,41 @@ func renderGraph(nodes []knowledge.GraphNode, format outputFormat) error {
 		})
 	}
 	return renderOutput(os.Stdout, format, renderer.GraphView{Nodes: views})
+}
+
+func renderAnalytics(w io.Writer, report analytics.Report, format outputFormat) error {
+	entryPoints := make(map[string]int, len(report.EntryPoints))
+	for entryPoint, count := range report.EntryPoints {
+		entryPoints[string(entryPoint)] = count
+	}
+	topConcepts := make([]renderer.AnalyticsConcept, 0, len(report.TopConcepts))
+	for _, concept := range report.TopConcepts {
+		topConcepts = append(topConcepts, renderer.AnalyticsConcept{
+			ConceptID: concept.ConceptID,
+			LoadCount: concept.LoadCount,
+		})
+	}
+	recentBatches := make([]renderer.AnalyticsBatch, 0, len(report.RecentBatches))
+	for _, batch := range report.RecentBatches {
+		recentBatches = append(recentBatches, renderer.AnalyticsBatch{
+			BatchID:      batch.BatchID,
+			OccurredAt:   batch.OccurredAt,
+			EntryPoint:   string(batch.EntryPoint),
+			ConceptCount: len(batch.ConceptIDs),
+			ConceptIDs:   append([]string(nil), batch.ConceptIDs...),
+		})
+	}
+	return renderOutput(w, format, renderer.AnalyticsView{
+		Enabled:                 report.Enabled,
+		Provider:                string(report.Provider),
+		Period:                  renderer.AnalyticsPeriod{Since: report.Since},
+		ConceptLoads:            report.ConceptLoads,
+		RetrievalBatches:        report.RetrievalBatches,
+		AverageConceptsPerBatch: report.AverageConceptsPerBatch,
+		EntryPoints:             entryPoints,
+		TopConcepts:             topConcepts,
+		RecentBatches:           recentBatches,
+	})
 }
 
 func renderCheck(report knowledge.ValidationReport, format outputFormat) error {
