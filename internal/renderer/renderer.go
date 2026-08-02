@@ -15,6 +15,7 @@ const (
 	FormatFancy    Format = "fancy"
 	FormatJSON     Format = "json"
 	FormatMarkdown Format = "markdown"
+	FormatAgent    Format = "agent"
 )
 
 // Renderer writes one output format for a typed view.
@@ -27,7 +28,7 @@ type Renderer interface {
 func ParseFormat(value string) (Format, error) {
 	format := Format(strings.ToLower(strings.TrimSpace(value)))
 	switch format {
-	case FormatCompact, FormatFancy, FormatJSON, FormatMarkdown:
+	case FormatCompact, FormatFancy, FormatJSON, FormatMarkdown, FormatAgent:
 		return format, nil
 	default:
 		return "", unsupportedFormat(format)
@@ -45,6 +46,8 @@ func New(format Format) (Renderer, error) {
 		return jsonRenderer{}, nil
 	case FormatMarkdown:
 		return markdownRenderer{}, nil
+	case FormatAgent:
+		return agentRenderer{}, nil
 	default:
 		return nil, unsupportedFormat(format)
 	}
@@ -57,7 +60,7 @@ func writeJSON(w io.Writer, value any) error {
 }
 
 func unsupportedFormat(format Format) error {
-	return fmt.Errorf("unsupported format %q; available formats: compact, fancy, json, markdown", format)
+	return fmt.Errorf("unsupported format %q; available formats: compact, fancy, json, markdown, agent", format)
 }
 
 func unsupportedView(view View) error {

@@ -105,7 +105,7 @@ manly list [path] [--recursive|--no-recursive] [--format FORMAT]
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--recursive` / `--no-recursive` | bool | false (configurable) | Include or exclude all nested concepts; overrides the configured recursive default |
-| `--format` | string | compact (configurable) | Output format: `compact`, `fancy`, `json`, or `markdown` |
+| `--format` | string | compact (configurable) | Output format: `compact`, `fancy`, `json`, `markdown`, or the list-only `agent` catalog format |
 
 If no path is given, `/` (the root) is used.
 
@@ -127,9 +127,13 @@ manly list --recursive
 # List concepts in a directory and all subdirectories
 manly list /programming --recursive
 
-# JSON output for scripts or agents
+# JSON output for scripts
 manly list --format json
 manly list /programming --recursive --format json
+
+# Compact catalog metadata for agent concept selection
+manly list --format agent
+manly list /programming --recursive --format agent
 
 # Fancy output with descriptions and open commands
 manly list --format fancy
@@ -143,6 +147,7 @@ manly list --format markdown
 - **compact**: Table with `PATH` and `TITLE / CONCEPTS` columns for non-recursive lists, or `ID` and `TITLE` columns for recursive lists. It also includes a footer hint (`List: manly list <PATH>` for non-recursive, `Details: manly show <ID>` for recursive) and the resolved root path.
 - **fancy**: Directory listing with concept counts, or per-concept entries with a description when present and an `Open:` action. Suitable for interactive browsing.
 - **json**: Structured object with `root`, `path`, `recursive`, `directories`, and `entries`. Each entry includes the concept metadata exposed by `manly`.
+- **agent**: Structured catalog object with `path`, `recursive`, directory paths, and `concepts` containing only exact IDs, titles, descriptions, types, and tags. It omits roots, actions, usage hints, duplicate paths, bodies, and relationships. This format is supported by `list` for staged agent retrieval.
 - **markdown**: Bullet list with Markdown links. Suitable for pasting into a note.
 
 ---
@@ -634,13 +639,14 @@ Prints `manly <version>` and exits. The version value depends on how the binary 
 
 ## Output Formats
 
-All read commands (`list`, `show`, `search`, `context`, `links`, `backlinks`, `graph`, `check`) accept `--format`.
+All read commands (`list`, `show`, `search`, `context`, `links`, `backlinks`, `graph`, `check`) accept `--format`. The list command additionally accepts the agent-only catalog format.
 
 | Format | Best for |
 |--------|---------|
 | `compact` | Terminal reading, piping to other CLI tools |
 | `fancy` | Interactive browsing, reading concepts with navigation hints |
-| `json` | Scripts, editor integrations, LLM agent consumption |
+| `json` | Scripts, editor integrations, general machine-readable output |
+| `agent` | Compact `list` catalog metadata for staged agent retrieval |
 | `markdown` | Embedding output in another Markdown document |
 
 The default is always `compact`.
@@ -652,11 +658,13 @@ The default is always `compact`.
 ### Retrieval pipeline
 
 ```
-manly search "relevant topic" --limit 5 --format json    # 1. Find candidates
-manly context "specific question" --limit 3 --format json # 2. Get bounded context
-manly show /matched/id --format json                     # 3. Dive deeper
-manly links /matched/id --format json                    # 4. Follow relationships
+manly list --format agent                              # 1. Browse the root catalog
+manly list /relevant/path --recursive --format agent    # 2. Narrow and inspect metadata
+manly show /selected/id-1 /selected/id-2 --format json  # 3. Load exact concepts in one batch
+manly graph /selected/id-1 --depth 1 --format json      # 4. Follow relationships when needed
 ```
+
+Use `manly context` or `manly search` as a lexical fallback only when catalog browsing is inconclusive. `list --format agent` is intentionally metadata-only and does not mutate generated indexes.
 
 ### One-shot context retrieval
 
@@ -870,13 +878,15 @@ Exits non-zero if any index section is stale.
 
 ### How do I use manly with AI coding agents?
 
-Feed agents structured context:
+Browse compact metadata first, then load the exact concepts selected by the agent:
 
 ```bash
-manly context "How should I handle errors in TypeScript?" --format json --limit 3
+manly list --format agent
+manly list /typescript --recursive --format agent
+manly show /typescript/type-safety /typescript/error-handling --format json
 ```
 
-Agents get concept bodies, links, and navigation actions. The agent can follow up with `manly show` or `manly links` on any returned ID.
+Use `manly context` or `manly search` only as a lexical fallback when the catalog is inconclusive. Follow links with `manly graph` or `manly links` only when relationships matter.
 
 ### How do I know which root and mode are active?
 

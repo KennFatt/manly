@@ -52,6 +52,9 @@ func (command *ListCommand) Run(app *appContext) error {
 		if format == formatJSON {
 			return renderJSONRecursiveDirectory(os.Stdout, app.root, prefix, directories, concepts, app.display)
 		}
+		if format == formatAgent {
+			return renderAgentConceptList(app.root, prefix, concepts)
+		}
 		return renderConceptList(app.root, bundle, concepts, format, bundleDirectoryTitle(bundle, prefix), app.display)
 	}
 	return renderDirectoryContents(app.root, bundle, prefix, directories, concepts, format, app.display)

@@ -2,13 +2,14 @@
 
 `internal/renderer` owns all presentation logic for `manly` command output.
 
-It converts typed presentation views into one of four output formats:
+It converts typed presentation views into one of five output formats:
 
 ```text
 compact   Minimal terminal output; default
 fancy     Rich terminal output
 json      Structured machine-readable output
 markdown  Markdown output
+agent     Compact catalog metadata for agent retrieval
 ```
 
 The package deliberately does not import `internal/knowledge`. It does not load bundles, search concepts, resolve links, or parse CLI arguments.
@@ -30,6 +31,7 @@ renderer.Render(writer, view)
    +--> fancy
    +--> json
    +--> markdown
+   +--> agent (list metadata only)
 ```
 
 The dependency direction is:
@@ -60,12 +62,13 @@ renderer.FormatCompact
 renderer.FormatFancy
 renderer.FormatJSON
 renderer.FormatMarkdown
+renderer.FormatAgent
 ```
 
 Invalid values produce an error containing all available formats:
 
 ```text
-unsupported format "human"; available formats: compact, fancy, json, markdown
+unsupported format "human"; available formats: compact, fancy, json, markdown, agent
 ```
 
 ### Renderer interface
@@ -118,8 +121,9 @@ The command layer constructs these views from knowledge-layer objects. Views sho
 | `fancy.go` | Rich terminal output and navigation actions |
 | `json.go` | JSON serialization |
 | `markdown.go` | Markdown serialization |
+| `agent.go` | Compact agent catalog serialization |
 
-Each renderer uses a type switch over the supported `View` types. Unsupported view types return an error instead of producing partial output.
+Each renderer uses a type switch over the supported `View` types. The `agent` renderer intentionally supports `ListView` only; unsupported view types return an error instead of producing partial output.
 
 ## Current output rules
 
@@ -179,6 +183,30 @@ Context: manly context /concept
 
 JSON output is the machine-readable contract. Changes to JSON field names or nesting should be treated as compatibility changes.
 
+### Agent
+
+Agent output is a purpose-built machine-readable list contract. It is supported by `list` and emits only:
+
+```json
+{
+  "path": "/engineering-preferences/react",
+  "recursive": true,
+  "directories": [],
+  "concepts": [
+    {
+      "id": "/engineering-preferences/react/hooks-as-controllers",
+      "type": "React Guideline",
+      "title": "Hooks as Controllers",
+      "description": "Components should be thin UI...",
+      "tags": ["react", "hooks"]
+    }
+  ],
+  "truncated": false
+}
+```
+
+It omits filesystem roots, duplicate file paths, concept bodies, relationships, actions, and usage hints. Other commands intentionally do not receive invented `agent` representations.
+
 ### Markdown
 
 Markdown output is intended for embedding in documents. It should remain valid, readable Markdown rather than terminal-oriented output.
@@ -190,6 +218,7 @@ Markdown output is intended for embedding in documents. It should remain valid, 
    - fancy: `fancy.go`
    - JSON: `json.go`
    - Markdown: `markdown.go`
+   - Agent catalog: `agent.go`
 2. Update only that renderer unless the output contract intentionally changes across formats.
 3. Preserve the view model as the source of data. Do not load bundles or query knowledge from a renderer.
 4. Keep output directed to the supplied `io.Writer`.
