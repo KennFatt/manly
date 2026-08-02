@@ -32,6 +32,8 @@ func (jsonRenderer) Render(w io.Writer, view View) error {
 		return writeJSON(w, value)
 	case CheckView:
 		return writeJSON(w, value)
+	case AnalyticsView:
+		return writeJSON(w, value)
 	default:
 		return unsupportedView(view)
 	}

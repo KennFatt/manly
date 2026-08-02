@@ -1,5 +1,7 @@
 package renderer
 
+import "time"
+
 // View is a typed presentation model accepted by a Renderer.
 type View interface {
 	view()
@@ -170,6 +172,41 @@ type GraphView struct {
 }
 
 func (GraphView) view() {}
+
+// AnalyticsView contains local concept-usage analytics.
+type AnalyticsView struct {
+	Enabled                 bool               `json:"enabled"`
+	Provider                string             `json:"provider,omitempty"`
+	Period                  AnalyticsPeriod    `json:"period"`
+	ConceptLoads            int                `json:"concept_loads"`
+	RetrievalBatches        int                `json:"retrieval_batches"`
+	AverageConceptsPerBatch float64            `json:"average_concepts_per_batch"`
+	EntryPoints             map[string]int     `json:"entry_points"`
+	TopConcepts             []AnalyticsConcept `json:"top_concepts"`
+	RecentBatches           []AnalyticsBatch   `json:"recent_batches"`
+}
+
+// AnalyticsPeriod identifies the lower bound used for a report.
+type AnalyticsPeriod struct {
+	Since *time.Time `json:"since"`
+}
+
+// AnalyticsConcept contains one concept's usage count.
+type AnalyticsConcept struct {
+	ConceptID string `json:"concept_id"`
+	LoadCount int    `json:"load_count"`
+}
+
+// AnalyticsBatch contains one recent retrieval group.
+type AnalyticsBatch struct {
+	BatchID      string    `json:"batch_id"`
+	OccurredAt   time.Time `json:"occurred_at"`
+	EntryPoint   string    `json:"entry_point"`
+	ConceptCount int       `json:"concept_count"`
+	ConceptIDs   []string  `json:"concept_ids"`
+}
+
+func (AnalyticsView) view() {}
 
 // Issue contains one validation issue.
 type Issue struct {

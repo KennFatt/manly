@@ -107,6 +107,7 @@ return outputRenderer.Render(os.Stdout, view)
 - `LinksView`
 - `BacklinksView`
 - `GraphView`
+- `AnalyticsView`
 - `CheckView`
 
 The command layer constructs these views from knowledge-layer objects. Views should contain presentation-ready values such as titles, descriptions, IDs, links, actions, scores, and content.

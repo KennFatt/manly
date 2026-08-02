@@ -35,6 +35,8 @@ func (compactRenderer) Render(w io.Writer, view View) error {
 		return renderCompactGraph(w, value)
 	case CheckView:
 		return renderCompactCheck(w, value)
+	case AnalyticsView:
+		return renderCompactAnalytics(w, value)
 	default:
 		return unsupportedView(view)
 	}
