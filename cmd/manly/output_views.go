@@ -10,11 +10,12 @@ import (
 	"github.com/KennFatt/manly/internal/renderer"
 )
 
-func renderConceptList(root string, bundle *knowledge.Bundle, concepts []*knowledge.Concept, format outputFormat, heading string, display config.Display) error {
+func renderConceptList(root string, bundle *knowledge.Bundle, prefix string, concepts []*knowledge.Concept, format outputFormat, heading string, display config.Display) error {
 	view := renderer.ListView{
 		Root:        root,
 		Path:        heading,
 		Heading:     heading,
+		Description: bundleDescription(bundle, prefix),
 		Recursive:   true,
 		Entries:     conceptEntries(concepts, display.Actions),
 		HideActions: !display.Actions,
@@ -51,6 +52,7 @@ func renderDirectoryContents(root string, bundle *knowledge.Bundle, prefix strin
 		Root:        root,
 		Path:        directoryDisplay(prefix),
 		Heading:     bundleDirectoryTitle(bundle, prefix),
+		Description: bundleDescription(bundle, prefix),
 		Directories: directoryEntries(directories, bundle),
 		Entries:     conceptEntries(concepts, display.Actions),
 		Count:       countConceptsUnder(bundle, prefix),

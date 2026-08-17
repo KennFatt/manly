@@ -55,7 +55,7 @@ func (command *ListCommand) Run(app *appContext) error {
 		if format == formatAgent {
 			return renderAgentConceptList(app.root, prefix, concepts)
 		}
-		return renderConceptList(app.root, bundle, concepts, format, bundleDirectoryTitle(bundle, prefix), app.display)
+		return renderConceptList(app.root, bundle, prefix, concepts, format, bundleDirectoryTitle(bundle, prefix), app.display)
 	}
 	return renderDirectoryContents(app.root, bundle, prefix, directories, concepts, format, app.display)
 }
@@ -133,6 +133,13 @@ func bundleDirectoryTitle(bundle *knowledge.Bundle, prefix string) string {
 		return bundle.Title
 	}
 	return directoryTitle(prefix)
+}
+
+func bundleDescription(bundle *knowledge.Bundle, prefix string) string {
+	if prefix != "" {
+		return ""
+	}
+	return bundle.Description
 }
 
 func directoryTitle(prefix string) string {

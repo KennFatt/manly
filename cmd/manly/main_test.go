@@ -73,6 +73,38 @@ func TestCLIWorkflow(t *testing.T) {
 	}
 }
 
+func TestCLIListMarkdownShowsRootBundleDescription(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("MANLY_ROOT", "")
+	root := t.TempDir()
+	if _, err := runCommand(t, root, "init"); err != nil {
+		t.Fatal(err)
+	}
+	writeCLIFile(t, root, "index.md", "---\nokf_version: \"0.1\"\ntype: Bundle\ntitle: Engineering Preferences\ndescription: Shared engineering conventions.\n---\n")
+	writeCLIFile(t, root, "general/naming.md", "---\ntype: Guideline\ntitle: Naming\ndescription: Use clear names.\n---\n")
+
+	for _, args := range [][]string{
+		{"list", "--format", "markdown"},
+		{"list", "--recursive", "--format", "markdown"},
+	} {
+		output, err := runCommand(t, root, args...)
+		if err != nil || !strings.Contains(output, "# Engineering Preferences") || !strings.Contains(output, "Shared engineering conventions.") {
+			t.Fatalf("%v = %q, %v", args, output, err)
+		}
+	}
+
+	output, err := runCommand(t, root, "list", "/general", "--format", "markdown")
+	if err != nil || !strings.Contains(output, "# General") || strings.Contains(output, "Shared engineering conventions.") {
+		t.Fatalf("nested Markdown list = %q, %v", output, err)
+	}
+
+	writeCLIFile(t, root, "index.md", "---\nokf_version: \"0.1\"\ntype: Bundle\ntitle: Engineering Preferences\n---\n")
+	output, err = runCommand(t, root, "list", "--format", "markdown")
+	if err != nil || strings.Contains(output, "Shared engineering conventions.") {
+		t.Fatalf("Markdown list without bundle description = %q, %v", output, err)
+	}
+}
+
 func TestCLIAnalyticsRecordsSuccessfulFullContentOnly(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("MANLY_ROOT", "")

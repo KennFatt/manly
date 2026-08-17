@@ -168,6 +168,7 @@ func renderWorkspaceDirectory(workspace *knowledge.Workspace, bundle *knowledge.
 		Root:        workspace.Root,
 		Path:        displayPath,
 		Heading:     bundleDirectoryTitle(bundle, prefix),
+		Description: bundleDescription(bundle, prefix),
 		Recursive:   recursive,
 		Entries:     conceptEntries(displayRefs(workspace, refs), display.Actions),
 		HideActions: !display.Actions,
