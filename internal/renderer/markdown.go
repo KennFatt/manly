@@ -45,13 +45,26 @@ func (markdownRenderer) Render(w io.Writer, view View) error {
 func renderMarkdownList(w io.Writer, view ListView) error {
 	if view.Heading != "" {
 		fmt.Fprintf(w, "# %s\n\n", view.Heading)
+		if description := strings.TrimSpace(view.Description); description != "" {
+			fmt.Fprintf(w, "%s\n\n", description)
+		}
 	}
 	for _, directory := range view.Directories {
-		fmt.Fprintf(w, "* [%s](%s/)\n", filepath.Base(directory.Path), directory.Path)
+		description := strings.TrimSpace(directory.Description)
+		if description == "" {
+			fmt.Fprintf(w, "* [%s](%s/)\n", filepath.Base(directory.Path), directory.Path)
+			continue
+		}
+		fmt.Fprintf(w, "* [%s](%s/) - %s\n", filepath.Base(directory.Path), directory.Path, description)
 	}
 	for _, entry := range view.Entries {
 		concept := entry.Concept
-		fmt.Fprintf(w, "* [%s](%s.md) - %s\n", concept.Title, concept.ID, concept.Description)
+		description := strings.TrimSpace(concept.Description)
+		if description == "" {
+			fmt.Fprintf(w, "* [%s](%s.md)\n", concept.Title, concept.ID)
+			continue
+		}
+		fmt.Fprintf(w, "* [%s](%s.md) - %s\n", concept.Title, concept.ID, description)
 	}
 	if view.Root != "" {
 		fmt.Fprintf(w, "\n**Root:** %s\n", view.Root)

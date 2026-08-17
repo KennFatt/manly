@@ -10,25 +10,29 @@ import (
 	"github.com/KennFatt/manly/internal/renderer"
 )
 
-func renderConceptList(root string, bundle *knowledge.Bundle, concepts []*knowledge.Concept, format outputFormat, heading string, display config.Display) error {
+func renderConceptList(root string, bundle *knowledge.Bundle, prefix string, concepts []*knowledge.Concept, directories []string, format outputFormat, heading string, display config.Display) error {
 	view := renderer.ListView{
-		Root:        root,
-		Path:        heading,
-		Heading:     heading,
-		Recursive:   true,
-		Entries:     conceptEntries(concepts, display.Actions),
-		HideActions: !display.Actions,
-		HideUsage:   !display.Usage,
+		Root:            root,
+		Path:            heading,
+		Heading:         heading,
+		Description:     bundleDescription(bundle, prefix),
+		Recursive:       true,
+		ShowDirectories: len(directories) > 0,
+		Directories:     directoryEntries(directories, bundle),
+		Entries:         conceptEntries(concepts, display.Actions),
+		HideActions:     !display.Actions,
+		HideUsage:       !display.Usage,
 	}
 	return renderOutput(os.Stdout, format, view)
 }
 
-func renderAgentConceptList(root string, prefix string, concepts []*knowledge.Concept) error {
+func renderAgentConceptList(root string, prefix string, concepts []*knowledge.Concept, directories []string) error {
 	view := renderer.ListView{
-		Root:      root,
-		Path:      directoryDisplay(prefix),
-		Recursive: true,
-		Entries:   conceptEntries(concepts, false),
+		Root:        root,
+		Path:        directoryDisplay(prefix),
+		Recursive:   true,
+		Directories: directoryEntries(directories, nil),
+		Entries:     conceptEntries(concepts, false),
 	}
 	return renderOutput(os.Stdout, formatAgent, view)
 }
@@ -51,6 +55,7 @@ func renderDirectoryContents(root string, bundle *knowledge.Bundle, prefix strin
 		Root:        root,
 		Path:        directoryDisplay(prefix),
 		Heading:     bundleDirectoryTitle(bundle, prefix),
+		Description: bundleDescription(bundle, prefix),
 		Directories: directoryEntries(directories, bundle),
 		Entries:     conceptEntries(concepts, display.Actions),
 		Count:       countConceptsUnder(bundle, prefix),
@@ -78,11 +83,14 @@ func conceptEntries(concepts []*knowledge.Concept, showActions ...bool) []render
 func directoryEntries(directories []string, bundle *knowledge.Bundle) []renderer.Directory {
 	entries := make([]renderer.Directory, 0, len(directories))
 	for _, directory := range directories {
+		prefix := trimDirectoryPrefix(directory)
 		count := 0
+		description := ""
 		if bundle != nil {
-			count = countConceptsUnder(bundle, trimDirectoryPrefix(directory))
+			count = countConceptsUnder(bundle, prefix)
+			description = bundle.MetadataForDirectory(prefix).Description
 		}
-		entries = append(entries, renderer.Directory{Path: directory, Count: count})
+		entries = append(entries, renderer.Directory{Path: directory, Count: count, Description: description})
 	}
 	return entries
 }

@@ -13,10 +13,14 @@ import (
 type ListCommand struct {
 	Path      string `arg:"" optional:"" default:"/" help:"Directory path to list."`
 	Recursive bool   `default:"${recursive}" negatable help:"Include nested concepts."`
+	Level     *int   `help:"Maximum recursive listing level."`
 	Format    string `default:"${format}" help:"Output format."`
 }
 
 func (command *ListCommand) Run(app *appContext) error {
+	if err := command.validate(); err != nil {
+		return err
+	}
 	format, err := parseFormat(command.Format)
 	if err != nil {
 		return err
@@ -35,29 +39,98 @@ func (command *ListCommand) Run(app *appContext) error {
 				return fmt.Errorf("directory not found: %s", command.Path)
 			}
 			if command.Recursive {
-				return renderWorkspaceRecursiveList(workspace, format, app.display)
+				return renderWorkspaceRecursiveList(workspace, command.Level, format, app.display)
 			}
 			return renderWorkspaceRootList(workspace, format, app.display)
 		}
-		return renderWorkspaceDirectory(workspace, bundle, name, prefix, command.Recursive, format, app.display)
+		return renderWorkspaceDirectory(workspace, bundle, name, prefix, command.Recursive, command.Level, format, app.display)
 	}
 	bundle := workspace.Bundles[0]
 	prefix, err := directoryPrefix(command.Path)
 	if err != nil {
 		return err
 	}
-	concepts := bundle.ConceptsUnder(prefix, command.Recursive)
-	directories := childDirectories(bundle, prefix)
+	concepts := listConcepts(bundle, prefix, command.Recursive, command.Level)
+	directories := listDirectories(bundle, prefix, command.Recursive, command.Level)
 	if command.Recursive {
+		visibleDirectories := []string(nil)
+		if command.Level != nil {
+			visibleDirectories = directories
+		}
 		if format == formatJSON {
 			return renderJSONRecursiveDirectory(os.Stdout, app.root, prefix, directories, concepts, app.display)
 		}
 		if format == formatAgent {
-			return renderAgentConceptList(app.root, prefix, concepts)
+			return renderAgentConceptList(app.root, prefix, concepts, visibleDirectories)
 		}
-		return renderConceptList(app.root, bundle, concepts, format, bundleDirectoryTitle(bundle, prefix), app.display)
+		return renderConceptList(app.root, bundle, prefix, concepts, visibleDirectories, format, bundleDirectoryTitle(bundle, prefix), app.display)
 	}
 	return renderDirectoryContents(app.root, bundle, prefix, directories, concepts, format, app.display)
+}
+
+func (command *ListCommand) validate() error {
+	if command.Level == nil {
+		return nil
+	}
+	if *command.Level < 1 {
+		return fmt.Errorf("--level must be at least 1")
+	}
+	if !command.Recursive {
+		return fmt.Errorf("--level requires --recursive")
+	}
+	return nil
+}
+
+func listConcepts(bundle *knowledge.Bundle, prefix string, recursive bool, level *int) []*knowledge.Concept {
+	if !recursive {
+		return bundle.ConceptsUnder(prefix, false)
+	}
+	if level == nil {
+		return bundle.ConceptsUnder(prefix, true)
+	}
+	return bundle.ConceptsUnderLevel(prefix, *level)
+}
+
+func listDirectories(bundle *knowledge.Bundle, prefix string, recursive bool, level *int) []string {
+	if !recursive || level == nil {
+		return childDirectories(bundle, prefix)
+	}
+	return directoriesAtLevel(bundle, prefix, *level)
+}
+
+func directoriesAtLevel(bundle *knowledge.Bundle, prefix string, level int) []string {
+	seen := make(map[string]bool)
+	if level < 1 {
+		return []string{}
+	}
+	for _, concept := range bundle.Concepts {
+		directory := filepath.ToSlash(filepath.Dir(concept.RelPath))
+		if directory == "." {
+			directory = ""
+		}
+		if prefix != "" && directory != prefix && !strings.HasPrefix(directory, prefix+"/") {
+			continue
+		}
+		relative := strings.Trim(strings.TrimPrefix(directory, prefix), "/")
+		if relative == "" {
+			continue
+		}
+		segments := strings.Split(relative, "/")
+		if len(segments) != level {
+			continue
+		}
+		path := strings.Join(segments, "/")
+		if prefix != "" {
+			path = prefix + "/" + path
+		}
+		seen["/"+path] = true
+	}
+	result := make([]string, 0, len(seen))
+	for directory := range seen {
+		result = append(result, directory)
+	}
+	sort.Strings(result)
+	return result
 }
 
 func directoryPrefix(value string) (string, error) {
@@ -133,6 +206,13 @@ func bundleDirectoryTitle(bundle *knowledge.Bundle, prefix string) string {
 		return bundle.Title
 	}
 	return directoryTitle(prefix)
+}
+
+func bundleDescription(bundle *knowledge.Bundle, prefix string) string {
+	if prefix == "" {
+		return bundle.Description
+	}
+	return bundle.MetadataForDirectory(prefix).Description
 }
 
 func directoryTitle(prefix string) string {

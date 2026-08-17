@@ -45,7 +45,7 @@ func renderFancyList(w io.Writer, view ListView) error {
 	if view.Heading != "" {
 		fmt.Fprintf(w, "%s\n\n", view.Heading)
 	}
-	if !view.Recursive {
+	if !view.Recursive || view.ShowDirectories {
 		for _, directory := range view.Directories {
 			fmt.Fprintf(w, "  %-24s %d concepts\n", directory.Path, directory.Count)
 		}

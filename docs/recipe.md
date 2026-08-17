@@ -103,15 +103,16 @@ A discovered workspace bundle must have parseable frontmatter in its root `index
 List concept-containing directories or concepts in a bundle or workspace. This is your primary browsing command.
 
 ```
-manly list [path] [--recursive|--no-recursive] [--format FORMAT]
+manly list [path] [--recursive|--no-recursive] [--level N] [--format FORMAT]
 ```
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--recursive` / `--no-recursive` | bool | false (configurable) | Include or exclude all nested concepts; overrides the configured recursive default |
+| `--level` | integer | unset | Bound recursive listing to this one-based level; requires `--recursive` and must be at least 1 |
 | `--format` | string | compact (configurable) | Output format: `compact`, `fancy`, `json`, `markdown`, or the list-only `agent` catalog format |
 
-If no path is given, `/` (the root) is used.
+If no path is given, `/` (the root) is used. With `--recursive --level N`, concepts are included through level N, while directory rows show the requested frontier level. At a workspace root, bundle directories such as `/engineering-preferences` and `/mermaid` are level 1; their immediate directories and concepts are level 2. `--recursive` without `--level` remains unbounded.
 
 **Examples**
 
@@ -128,8 +129,8 @@ manly list /engineering-preferences/react
 # List every concept in the entire bundle or workspace
 manly list --recursive
 
-# List concepts in a directory and all subdirectories
-manly list /programming --recursive
+# List concepts in a directory and its first two levels
+manly list /programming --recursive --level 2
 
 # JSON output for scripts
 manly list --format json

@@ -34,7 +34,29 @@ func TestCLIWorkflow(t *testing.T) {
 	assertCommandContains(t, root, []string{"list", "--recursive", "--format", "markdown"}, "# Knowledge Bundle", "/group/b.md")
 	assertCommandContains(t, root, []string{"list", "--recursive", "--format", "json"}, `"recursive": true`, `"/group/b"`)
 	assertCommandContains(t, root, []string{"list", "--recursive", "--format", "agent"}, `"concepts"`, `"/group/b"`, `"type"`, `"tags"`)
-	output, err := runCommand(t, root, "list", "--recursive", "--format", "agent")
+	output, err := runCommand(t, root, "list", "--recursive", "--level", "1", "--format", "agent")
+	if err != nil || !strings.Contains(output, `"/a"`) || !strings.Contains(output, `"/group"`) || strings.Contains(output, `"/group/b"`) {
+		t.Fatalf("level one list = %q, %v", output, err)
+	}
+	output, err = runCommand(t, root, "list", "/group", "--recursive", "--level", "1", "--format", "agent")
+	if err != nil || !strings.Contains(output, `"/group/b"`) || strings.Contains(output, `"/group/nested/c"`) {
+		t.Fatalf("directory level one list = %q, %v", output, err)
+	}
+	output, err = runCommand(t, root, "list", "/group", "--recursive", "--level", "2", "--format", "agent")
+	if err != nil || !strings.Contains(output, `"/group/nested/c"`) {
+		t.Fatalf("directory level two list = %q, %v", output, err)
+	}
+	output, err = runCommand(t, root, "list", "--recursive", "--level", "10", "--format", "agent")
+	if err != nil || strings.Contains(output, `"directories":["`) {
+		t.Fatalf("deep level list = %q, %v", output, err)
+	}
+	if _, err := runCommand(t, root, "list", "--level", "1"); err == nil || !strings.Contains(err.Error(), "requires --recursive") {
+		t.Fatalf("level without recursion error = %v", err)
+	}
+	if _, err := runCommand(t, root, "list", "--recursive", "--level", "0"); err == nil || !strings.Contains(err.Error(), "at least 1") {
+		t.Fatalf("invalid level error = %v", err)
+	}
+	output, err = runCommand(t, root, "list", "--recursive", "--format", "agent")
 	if err != nil || strings.Contains(output, `"root"`) || strings.Contains(output, `"entries"`) || strings.Contains(output, `"actions"`) {
 		t.Fatalf("agent list = %q, %v", output, err)
 	}
@@ -70,6 +92,127 @@ func TestCLIWorkflow(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join(root, "a.md"))
 	if err != nil || !strings.Contains(string(data), "group/renamed.md") {
 		t.Fatalf("moved link = %q, %v", data, err)
+	}
+}
+
+func TestCLIListMarkdownShowsRootBundleDescription(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("MANLY_ROOT", "")
+	root := t.TempDir()
+	if _, err := runCommand(t, root, "init"); err != nil {
+		t.Fatal(err)
+	}
+	writeCLIFile(t, root, "index.md", "---\nokf_version: \"0.1\"\ntype: Bundle\ntitle: Engineering Preferences\ndescription: Shared engineering conventions.\n---\n")
+	writeCLIFile(t, root, "general/naming.md", "---\ntype: Guideline\ntitle: Naming\ndescription: Use clear names.\n---\n")
+
+	for _, args := range [][]string{
+		{"list", "--format", "markdown"},
+		{"list", "--recursive", "--format", "markdown"},
+	} {
+		output, err := runCommand(t, root, args...)
+		if err != nil || !strings.Contains(output, "# Engineering Preferences") || !strings.Contains(output, "Shared engineering conventions.") {
+			t.Fatalf("%v = %q, %v", args, output, err)
+		}
+	}
+
+	output, err := runCommand(t, root, "list", "/general", "--format", "markdown")
+	if err != nil || !strings.Contains(output, "# General") || strings.Contains(output, "Shared engineering conventions.") {
+		t.Fatalf("nested Markdown list = %q, %v", output, err)
+	}
+
+	writeCLIFile(t, root, "index.md", "---\nokf_version: \"0.1\"\ntype: Bundle\ntitle: Engineering Preferences\n---\n")
+	output, err = runCommand(t, root, "list", "--format", "markdown")
+	if err != nil || strings.Contains(output, "Shared engineering conventions.") {
+		t.Fatalf("Markdown list without bundle description = %q, %v", output, err)
+	}
+}
+
+func TestCLIWorkspaceMarkdownDescriptions(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("MANLY_ROOT", "")
+	root := t.TempDir()
+	writeCLIFile(t, root, "index.md", "---\ndescription: Workspace description.\n---\n")
+	writeCLIFile(t, root, "bundle-a/index.md", "---\nokf_version: \"0.1\"\ntype: Bundle\ntitle: Bundle A\ndescription: Bundle A description.\n---\n")
+	writeCLIFile(t, root, "bundle-a/general/index.md", "---\ntitle: General\ndescription: General directory description.\n---\n")
+	writeCLIFile(t, root, "bundle-a/general/naming.md", "---\ntype: Guideline\ntitle: Naming\ndescription: Use clear names.\n---\n")
+	writeCLIFile(t, root, "bundle-a/empty-directory/index.md", "---\ntitle: Empty Directory\ndescription: Should stay undiscoverable.\n---\n")
+	writeCLIFile(t, root, "bundle-b/index.md", "---\nokf_version: \"0.1\"\ntype: Bundle\ntitle: Bundle B\n---\n")
+
+	output, err := runCommand(t, root, "list", "--format", "markdown")
+	if err != nil {
+		t.Fatalf("workspace list = %q, %v", output, err)
+	}
+	for _, fragment := range []string{
+		"# Knowledge Workspace\n\nWorkspace description.",
+		"* [bundle-a](/bundle-a/) - Bundle A description.",
+		"* [bundle-b](/bundle-b/)",
+	} {
+		if !strings.Contains(output, fragment) {
+			t.Fatalf("workspace list %q does not contain %q", output, fragment)
+		}
+	}
+	if strings.Contains(output, "* [bundle-b](/bundle-b/) -") {
+		t.Fatalf("bundle without description has a suffix: %q", output)
+	}
+
+	output, err = runCommand(t, root, "list", "/bundle-a", "--format", "markdown")
+	if err != nil {
+		t.Fatalf("bundle list = %q, %v", output, err)
+	}
+	for _, fragment := range []string{
+		"# Bundle A\n\nBundle A description.",
+		"* [general](/bundle-a/general/) - General directory description.",
+	} {
+		if !strings.Contains(output, fragment) {
+			t.Fatalf("bundle list %q does not contain %q", output, fragment)
+		}
+	}
+	if strings.Contains(output, "empty-directory") || strings.Count(output, "Bundle A description.") != 1 {
+		t.Fatalf("bundle list inherited or discovered wrong metadata: %q", output)
+	}
+
+	output, err = runCommand(t, root, "list", "/bundle-a/general", "--format", "markdown")
+	if err != nil {
+		t.Fatalf("directory list = %q, %v", output, err)
+	}
+	for _, fragment := range []string{
+		"# General\n\nGeneral directory description.",
+		"* [Naming](/bundle-a/general/naming.md) - Use clear names.",
+	} {
+		if !strings.Contains(output, fragment) {
+			t.Fatalf("directory list %q does not contain %q", output, fragment)
+		}
+	}
+	if strings.Contains(output, "Bundle A description.") {
+		t.Fatalf("directory list inherited bundle description: %q", output)
+	}
+
+	output, err = runCommand(t, root, "list", "--recursive", "--format", "markdown")
+	if err != nil || !strings.Contains(output, "# Knowledge Workspace\n\nWorkspace description.") || !strings.Contains(output, "* [Naming](/bundle-a/general/naming.md) - Use clear names.") || strings.Contains(output, "* [bundle-a](/bundle-a/)") {
+		t.Fatalf("recursive workspace list = %q, %v", output, err)
+	}
+	output, err = runCommand(t, root, "list", "--recursive", "--level", "1", "--format", "agent")
+	if err != nil || !strings.Contains(output, "/bundle-a") || !strings.Contains(output, "/bundle-b") || strings.Contains(output, "/bundle-a/general/naming") {
+		t.Fatalf("workspace level one list = %q, %v", output, err)
+	}
+	output, err = runCommand(t, root, "list", "--recursive", "--level", "2", "--format", "agent")
+	if err != nil || !strings.Contains(output, "/bundle-a/general") || strings.Contains(output, "/bundle-a/general/naming") {
+		t.Fatalf("workspace level two list = %q, %v", output, err)
+	}
+	output, err = runCommand(t, root, "list", "--recursive", "--level", "3", "--format", "agent")
+	if err != nil || !strings.Contains(output, "/bundle-a/general/naming") {
+		t.Fatalf("workspace level three list = %q, %v", output, err)
+	}
+	output, err = runCommand(t, root, "list", "/bundle-a", "--recursive", "--format", "markdown")
+	if err != nil || !strings.Contains(output, "* [general](/bundle-a/general/) - General directory description.") {
+		t.Fatalf("recursive bundle list = %q, %v", output, err)
+	}
+
+	for _, format := range []string{"compact", "fancy", "json", "agent"} {
+		output, err = runCommand(t, root, "list", "--format", format)
+		if err != nil || strings.Contains(output, "Workspace description.") || strings.Contains(output, "Bundle A description.") {
+			t.Fatalf("non-Markdown workspace list (%s) = %q, %v", format, output, err)
+		}
 	}
 }
 
@@ -222,6 +365,11 @@ func TestCLIConfigDefaultsAndOverrides(t *testing.T) {
 	})
 	if err != nil || !strings.Contains(output, "nested") || strings.Contains(output, "List: manly list") || strings.Contains(output, "Details: manly show") {
 		t.Fatalf("CLI list overrides = %q, %v", output, err)
+	}
+	if _, err := captureOutput(t, func() error {
+		return run([]string{"list", "--no-recursive", "--level", "1"})
+	}); err == nil || !strings.Contains(err.Error(), "requires --recursive") {
+		t.Fatalf("configured recursion level override error = %v", err)
 	}
 	output, err = captureOutput(t, func() error { return run([]string{"show", "/nested/note"}) })
 	if err != nil || strings.Contains(output, `"actions"`) {

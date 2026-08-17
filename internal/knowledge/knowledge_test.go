@@ -38,6 +38,86 @@ func TestLoadResolvesLinksAndBacklinks(t *testing.T) {
 	}
 }
 
+func TestLoadReadsBundleMetadata(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, root, "index.md", "---\ntitle: Engineering Preferences\ndescription: Shared engineering conventions.\n---\n")
+
+	bundle, err := Load(root)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if bundle.Title != "Engineering Preferences" {
+		t.Fatalf("bundle title = %q", bundle.Title)
+	}
+	if bundle.Description != "Shared engineering conventions." {
+		t.Fatalf("bundle description = %q", bundle.Description)
+	}
+
+	rootWithoutDescription := t.TempDir()
+	writeTestFile(t, rootWithoutDescription, "index.md", "# Knowledge Bundle\n")
+	bundleWithoutDescription, err := Load(rootWithoutDescription)
+	if err != nil {
+		t.Fatalf("Load() without description error = %v", err)
+	}
+	if bundleWithoutDescription.Description != "" {
+		t.Fatalf("bundle description without metadata = %q", bundleWithoutDescription.Description)
+	}
+}
+
+func TestConceptsUnderLevel(t *testing.T) {
+	bundle := &Bundle{Concepts: []*Concept{
+		{ID: "/root", RelPath: "root.md"},
+		{ID: "/group/child", RelPath: "group/child.md"},
+		{ID: "/group/nested/deep", RelPath: "group/nested/deep.md"},
+	}}
+
+	for _, test := range []struct {
+		name   string
+		prefix string
+		level  int
+		want   []string
+	}{
+		{name: "root level one", prefix: "", level: 1, want: []string{"/root"}},
+		{name: "root level two", prefix: "", level: 2, want: []string{"/group/child", "/root"}},
+		{name: "directory level one", prefix: "group", level: 1, want: []string{"/group/child"}},
+		{name: "directory level two", prefix: "group", level: 2, want: []string{"/group/child", "/group/nested/deep"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			concepts := bundle.ConceptsUnderLevel(test.prefix, test.level)
+			if len(concepts) != len(test.want) {
+				t.Fatalf("got %d concepts, want %d", len(concepts), len(test.want))
+			}
+			for index, concept := range concepts {
+				if concept.ID != test.want[index] {
+					t.Fatalf("concept %d = %q, want %q", index, concept.ID, test.want[index])
+				}
+			}
+		})
+	}
+}
+
+func TestLoadReadsNestedDirectoryMetadata(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, root, "index.md", "---\ntitle: Bundle\ndescription: Bundle description.\n---\n")
+	writeTestFile(t, root, "general/index.md", "---\ntitle: General\ndescription: General practices.\n---\n")
+	writeTestFile(t, root, "general/plain/index.md", "# Plain directory\n")
+	writeTestFile(t, root, "general/broken/index.md", "---\ntitle: [broken\n---\n")
+
+	bundle, err := Load(root)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if got := bundle.MetadataForDirectory("/general/"); got.Description != "General practices." || got.Title != "General" {
+		t.Fatalf("general metadata = %+v", got)
+	}
+	if got := bundle.MetadataForDirectory("general/plain"); got != (DirectoryMetadata{}) {
+		t.Fatalf("plain directory metadata = %+v, want empty", got)
+	}
+	if got := bundle.MetadataForDirectory("general/broken"); got != (DirectoryMetadata{}) {
+		t.Fatalf("broken directory metadata = %+v, want empty", got)
+	}
+}
+
 func TestSearchAndGraph(t *testing.T) {
 	root := t.TempDir()
 	writeTestFile(t, root, "index.md", "# Bundle\n")

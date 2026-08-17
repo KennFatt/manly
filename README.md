@@ -171,6 +171,19 @@ A concept ID is the root-relative file path without `.md`:
 /engineering/architecture-decisions
 ```
 
+The root `index.md` may also provide bundle metadata in its frontmatter:
+
+```yaml
+---
+okf_version: "0.1"
+type: Bundle
+title: Engineering Preferences
+description: Shared engineering conventions and references.
+---
+```
+
+`manly list --format markdown` renders a non-empty bundle description below the root heading. Nested directory listings do not inherit it.
+
 A concept can link to another concept with standard Markdown:
 
 ```markdown
@@ -221,7 +234,7 @@ A root that is itself a bundle continues to use local IDs such as `/programming/
 | `check` | Validate the bundle |
 | `version` | Print the manly executable version |
 
-All read commands, including `analytics`, support `--format compact|fancy|json|markdown` (default: `compact`, configurable). `list` additionally supports the machine-oriented `--format agent` catalog output. `list` also supports `--recursive` and `--no-recursive`.
+All read commands, including `analytics`, support `--format compact|fancy|json|markdown` (default: `compact`, configurable). `list` additionally supports the machine-oriented `--format agent` catalog output. `list` also supports `--recursive`, `--no-recursive`, and bounded recursion with `--level N` (one-based; requires `--recursive`).
 
 ### Analytics
 
@@ -245,7 +258,7 @@ Agent task
 manly list --format agent
     |
     v
-manly list /relevant/path --recursive --format agent
+manly list /relevant/path --recursive --level 2 --format agent
     |
     v
 manly show /selected/id-1 /selected/id-2 --format json

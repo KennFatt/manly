@@ -37,10 +37,12 @@ type Action struct {
 	Command string `json:"command"`
 }
 
-// Directory contains a directory path and its concept count.
+// Directory contains a directory path, its concept count, and optional
+// Markdown presentation metadata.
 type Directory struct {
-	Path  string `json:"path"`
-	Count int    `json:"count"`
+	Path        string `json:"path"`
+	Count       int    `json:"count"`
+	Description string `json:"-"`
 }
 
 // ListEntry contains one concept and its available actions.
@@ -51,15 +53,17 @@ type ListEntry struct {
 
 // ListView contains directory listing data.
 type ListView struct {
-	Root        string      `json:"root"`
-	Path        string      `json:"path"`
-	Heading     string      `json:"heading,omitempty"`
-	Recursive   bool        `json:"recursive"`
-	Directories []Directory `json:"directories"`
-	Entries     []ListEntry `json:"entries"`
-	Count       int         `json:"count,omitempty"`
-	HideActions bool        `json:"-"`
-	HideUsage   bool        `json:"-"`
+	Root            string      `json:"root"`
+	Path            string      `json:"path"`
+	Heading         string      `json:"heading,omitempty"`
+	Description     string      `json:"description,omitempty"`
+	Recursive       bool        `json:"recursive"`
+	Directories     []Directory `json:"directories"`
+	Entries         []ListEntry `json:"entries"`
+	Count           int         `json:"count,omitempty"`
+	ShowDirectories bool        `json:"-"`
+	HideActions     bool        `json:"-"`
+	HideUsage       bool        `json:"-"`
 }
 
 func (ListView) view() {}

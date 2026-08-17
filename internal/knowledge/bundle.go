@@ -34,12 +34,21 @@ type Link struct {
 	Broken     bool
 }
 
+// DirectoryMetadata contains optional presentation metadata from a directory's
+// reserved index.md file.
+type DirectoryMetadata struct {
+	Title       string
+	Description string
+}
+
 type Bundle struct {
-	Root     string
-	Title    string
-	Concepts []*Concept
-	ByID     map[string]*Concept
-	Markdown map[string]string
+	Root        string
+	Title       string
+	Description string
+	Directories map[string]DirectoryMetadata
+	Concepts    []*Concept
+	ByID        map[string]*Concept
+	Markdown    map[string]string
 }
 
 func Load(root string) (*Bundle, error) {
@@ -56,9 +65,10 @@ func Load(root string) (*Bundle, error) {
 	}
 
 	bundle := &Bundle{
-		Root:     resolvedRoot,
-		ByID:     make(map[string]*Concept),
-		Markdown: make(map[string]string),
+		Root:        resolvedRoot,
+		Directories: make(map[string]DirectoryMetadata),
+		ByID:        make(map[string]*Concept),
+		Markdown:    make(map[string]string),
 	}
 	var loadErr error
 	err = filepath.WalkDir(resolvedRoot, func(path string, entry os.DirEntry, walkErr error) error {
@@ -78,10 +88,16 @@ func Load(root string) (*Bundle, error) {
 		}
 		relPath = filepath.ToSlash(relPath)
 		bundle.Markdown[relPath] = path
-		if relPath == "index.md" {
-			if data, readErr := os.ReadFile(path); readErr == nil {
-				if metadata, _, parseErr := parseFrontmatter(string(data)); parseErr == nil {
-					bundle.Title = metadataString(metadata, "title")
+		if filepath.Base(relPath) == "index.md" {
+			if metadata, ok := readIndexMetadata(path); ok {
+				directory := filepath.ToSlash(filepath.Dir(relPath))
+				if directory == "." {
+					directory = ""
+				}
+				bundle.Directories[directory] = metadata
+				if directory == "" {
+					bundle.Title = metadata.Title
+					bundle.Description = metadata.Description
 				}
 			}
 		}
@@ -116,6 +132,27 @@ func Load(root string) (*Bundle, error) {
 	return bundle, nil
 }
 
+// MetadataForDirectory returns reserved index metadata for a bundle-relative
+// directory prefix. Missing metadata returns the zero value.
+func (b *Bundle) MetadataForDirectory(prefix string) DirectoryMetadata {
+	if b == nil {
+		return DirectoryMetadata{}
+	}
+	prefix = strings.TrimSpace(strings.ReplaceAll(prefix, "\\", "/"))
+	prefix = strings.Trim(prefix, "/")
+	if prefix == "" {
+		return b.Directories[""]
+	}
+	clean := filepath.ToSlash(filepath.Clean(prefix))
+	if clean == "." {
+		return b.Directories[""]
+	}
+	if clean == ".." || strings.HasPrefix(clean, "../") {
+		return DirectoryMetadata{}
+	}
+	return b.Directories[clean]
+}
+
 func (b *Bundle) Get(id string) (*Concept, error) {
 	canonical, err := CanonicalID(id)
 	if err != nil {
@@ -137,7 +174,7 @@ func (b *Bundle) ConceptsUnder(prefix string, recursive bool) []*Concept {
 			directory = ""
 		}
 		if recursive {
-			if prefix == "" || directory == prefix || strings.HasPrefix(directory, prefix+"/") {
+			if directoryUnder(directory, prefix) {
 				concepts = append(concepts, concept)
 			}
 		} else if directory == prefix {
@@ -146,6 +183,38 @@ func (b *Bundle) ConceptsUnder(prefix string, recursive bool) []*Concept {
 	}
 	sort.Slice(concepts, func(i, j int) bool { return concepts[i].ID < concepts[j].ID })
 	return concepts
+}
+
+// ConceptsUnderLevel returns concepts under prefix through the given one-based
+// directory level. A level of one includes concepts directly in prefix.
+func (b *Bundle) ConceptsUnderLevel(prefix string, maxLevel int) []*Concept {
+	concepts := make([]*Concept, 0)
+	if maxLevel < 1 {
+		return concepts
+	}
+	for _, concept := range b.Concepts {
+		directory := filepath.ToSlash(filepath.Dir(concept.RelPath))
+		if directory == "." {
+			directory = ""
+		}
+		if directoryUnder(directory, prefix) && directoryLevel(directory, prefix) <= maxLevel {
+			concepts = append(concepts, concept)
+		}
+	}
+	sort.Slice(concepts, func(i, j int) bool { return concepts[i].ID < concepts[j].ID })
+	return concepts
+}
+
+func directoryUnder(directory, prefix string) bool {
+	return prefix == "" || directory == prefix || strings.HasPrefix(directory, prefix+"/")
+}
+
+func directoryLevel(directory, prefix string) int {
+	relative := strings.Trim(strings.TrimPrefix(directory, prefix), "/")
+	if relative == "" {
+		return 1
+	}
+	return strings.Count(relative, "/") + 2
 }
 
 func CanonicalID(value string) (string, error) {
@@ -202,6 +271,21 @@ func parseConcept(path, root, relPath string) (*Concept, error) {
 		Tags:        metadataStrings(metadata, "tags"),
 		Body:        body,
 	}, nil
+}
+
+func readIndexMetadata(path string) (DirectoryMetadata, bool) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return DirectoryMetadata{}, false
+	}
+	metadata, _, err := parseFrontmatter(string(data))
+	if err != nil {
+		return DirectoryMetadata{}, false
+	}
+	return DirectoryMetadata{
+		Title:       metadataString(metadata, "title"),
+		Description: metadataString(metadata, "description"),
+	}, true
 }
 
 func parseFrontmatter(content string) (map[string]any, string, error) {

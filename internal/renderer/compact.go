@@ -49,7 +49,7 @@ type compactListRow struct {
 
 func renderCompactList(w io.Writer, view ListView) error {
 	rows := make([]compactListRow, 0, len(view.Directories)+len(view.Entries))
-	if !view.Recursive {
+	if !view.Recursive || view.ShowDirectories {
 		for _, directory := range view.Directories {
 			rows = append(rows, compactListRow{
 				Key:   directory.Path + "/",

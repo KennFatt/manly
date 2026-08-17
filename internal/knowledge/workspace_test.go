@@ -7,6 +7,7 @@ import (
 
 func TestLoadWorkspaceResolvesLinksWithinEachBundle(t *testing.T) {
 	root := t.TempDir()
+	writeTestFile(t, root, "index.md", "---\ndescription: Workspace description.\n---\n")
 	writeTestFile(t, root, "engineering-preferences/index.md", "---\nokf_version: \"0.1\"\ntype: Bundle\n---\n\n# Engineering\n")
 	writeTestConcept(t, root, "engineering-preferences/typescript/type-safety.md", "Type Safety", "Safe types.")
 	writeTestConcept(t, root, "engineering-preferences/react/handler-naming.md", "Handler Naming", "See [Type Safety](/typescript/type-safety.md).")
@@ -19,6 +20,9 @@ func TestLoadWorkspaceResolvesLinksWithinEachBundle(t *testing.T) {
 	}
 	if workspace.SingleRoot || len(workspace.Bundles) != 2 {
 		t.Fatalf("workspace = %#v", workspace)
+	}
+	if workspace.Description != "Workspace description." {
+		t.Fatalf("workspace description = %q", workspace.Description)
 	}
 	ref, err := workspace.ResolveConcept("/engineering-preferences/react/handler-naming")
 	if err != nil {
