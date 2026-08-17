@@ -38,6 +38,32 @@ func TestLoadResolvesLinksAndBacklinks(t *testing.T) {
 	}
 }
 
+func TestLoadReadsBundleMetadata(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, root, "index.md", "---\ntitle: Engineering Preferences\ndescription: Shared engineering conventions.\n---\n")
+
+	bundle, err := Load(root)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if bundle.Title != "Engineering Preferences" {
+		t.Fatalf("bundle title = %q", bundle.Title)
+	}
+	if bundle.Description != "Shared engineering conventions." {
+		t.Fatalf("bundle description = %q", bundle.Description)
+	}
+
+	rootWithoutDescription := t.TempDir()
+	writeTestFile(t, rootWithoutDescription, "index.md", "# Knowledge Bundle\n")
+	bundleWithoutDescription, err := Load(rootWithoutDescription)
+	if err != nil {
+		t.Fatalf("Load() without description error = %v", err)
+	}
+	if bundleWithoutDescription.Description != "" {
+		t.Fatalf("bundle description without metadata = %q", bundleWithoutDescription.Description)
+	}
+}
+
 func TestSearchAndGraph(t *testing.T) {
 	root := t.TempDir()
 	writeTestFile(t, root, "index.md", "# Bundle\n")

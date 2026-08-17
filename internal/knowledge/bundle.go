@@ -35,11 +35,12 @@ type Link struct {
 }
 
 type Bundle struct {
-	Root     string
-	Title    string
-	Concepts []*Concept
-	ByID     map[string]*Concept
-	Markdown map[string]string
+	Root        string
+	Title       string
+	Description string
+	Concepts    []*Concept
+	ByID        map[string]*Concept
+	Markdown    map[string]string
 }
 
 func Load(root string) (*Bundle, error) {
@@ -82,6 +83,7 @@ func Load(root string) (*Bundle, error) {
 			if data, readErr := os.ReadFile(path); readErr == nil {
 				if metadata, _, parseErr := parseFrontmatter(string(data)); parseErr == nil {
 					bundle.Title = metadataString(metadata, "title")
+					bundle.Description = metadataString(metadata, "description")
 				}
 			}
 		}
