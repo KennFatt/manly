@@ -171,6 +171,19 @@ A concept ID is the root-relative file path without `.md`:
 /engineering/architecture-decisions
 ```
 
+The root `index.md` may also provide bundle metadata in its frontmatter:
+
+```yaml
+---
+okf_version: "0.1"
+type: Bundle
+title: Engineering Preferences
+description: Shared engineering conventions and references.
+---
+```
+
+`manly list --format markdown` renders a non-empty bundle description below the root heading. Nested directory listings do not inherit it.
+
 A concept can link to another concept with standard Markdown:
 
 ```markdown
