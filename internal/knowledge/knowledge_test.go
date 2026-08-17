@@ -64,6 +64,28 @@ func TestLoadReadsBundleMetadata(t *testing.T) {
 	}
 }
 
+func TestLoadReadsNestedDirectoryMetadata(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, root, "index.md", "---\ntitle: Bundle\ndescription: Bundle description.\n---\n")
+	writeTestFile(t, root, "general/index.md", "---\ntitle: General\ndescription: General practices.\n---\n")
+	writeTestFile(t, root, "general/plain/index.md", "# Plain directory\n")
+	writeTestFile(t, root, "general/broken/index.md", "---\ntitle: [broken\n---\n")
+
+	bundle, err := Load(root)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if got := bundle.MetadataForDirectory("/general/"); got.Description != "General practices." || got.Title != "General" {
+		t.Fatalf("general metadata = %+v", got)
+	}
+	if got := bundle.MetadataForDirectory("general/plain"); got != (DirectoryMetadata{}) {
+		t.Fatalf("plain directory metadata = %+v, want empty", got)
+	}
+	if got := bundle.MetadataForDirectory("general/broken"); got != (DirectoryMetadata{}) {
+		t.Fatalf("broken directory metadata = %+v, want empty", got)
+	}
+}
+
 func TestSearchAndGraph(t *testing.T) {
 	root := t.TempDir()
 	writeTestFile(t, root, "index.md", "# Bundle\n")

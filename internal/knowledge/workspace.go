@@ -10,10 +10,11 @@ import (
 
 // Workspace coordinates one bundle or a directory containing direct child bundles.
 type Workspace struct {
-	Root       string
-	SingleRoot bool
-	Bundles    []*Bundle
-	ByName     map[string]*Bundle
+	Root        string
+	Description string
+	SingleRoot  bool
+	Bundles     []*Bundle
+	ByName      map[string]*Bundle
 }
 
 // WorkspaceMode describes how a workspace root is interpreted: as one bundle
@@ -93,7 +94,11 @@ func LoadWorkspace(root string) (*Workspace, error) {
 	if err != nil {
 		return nil, fmt.Errorf("scan workspace: %w", err)
 	}
-	workspace := &Workspace{Root: resolvedRoot, ByName: make(map[string]*Bundle)}
+	workspace := &Workspace{
+		Root:        resolvedRoot,
+		Description: workspaceRootDescription(resolvedRoot),
+		ByName:      make(map[string]*Bundle),
+	}
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
@@ -122,6 +127,14 @@ func LoadWorkspace(root string) (*Workspace, error) {
 		return workspace.bundleName(workspace.Bundles[i]) < workspace.bundleName(workspace.Bundles[j])
 	})
 	return workspace, nil
+}
+
+func workspaceRootDescription(root string) string {
+	metadata, ok := readIndexMetadata(filepath.Join(root, "index.md"))
+	if !ok {
+		return ""
+	}
+	return metadata.Description
 }
 
 func rootLooksLikeBundle(root string) bool {
