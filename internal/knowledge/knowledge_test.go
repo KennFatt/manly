@@ -64,6 +64,38 @@ func TestLoadReadsBundleMetadata(t *testing.T) {
 	}
 }
 
+func TestConceptsUnderLevel(t *testing.T) {
+	bundle := &Bundle{Concepts: []*Concept{
+		{ID: "/root", RelPath: "root.md"},
+		{ID: "/group/child", RelPath: "group/child.md"},
+		{ID: "/group/nested/deep", RelPath: "group/nested/deep.md"},
+	}}
+
+	for _, test := range []struct {
+		name   string
+		prefix string
+		level  int
+		want   []string
+	}{
+		{name: "root level one", prefix: "", level: 1, want: []string{"/root"}},
+		{name: "root level two", prefix: "", level: 2, want: []string{"/group/child", "/root"}},
+		{name: "directory level one", prefix: "group", level: 1, want: []string{"/group/child"}},
+		{name: "directory level two", prefix: "group", level: 2, want: []string{"/group/child", "/group/nested/deep"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			concepts := bundle.ConceptsUnderLevel(test.prefix, test.level)
+			if len(concepts) != len(test.want) {
+				t.Fatalf("got %d concepts, want %d", len(concepts), len(test.want))
+			}
+			for index, concept := range concepts {
+				if concept.ID != test.want[index] {
+					t.Fatalf("concept %d = %q, want %q", index, concept.ID, test.want[index])
+				}
+			}
+		})
+	}
+}
+
 func TestLoadReadsNestedDirectoryMetadata(t *testing.T) {
 	root := t.TempDir()
 	writeTestFile(t, root, "index.md", "---\ntitle: Bundle\ndescription: Bundle description.\n---\n")

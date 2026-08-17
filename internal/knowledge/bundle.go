@@ -174,7 +174,7 @@ func (b *Bundle) ConceptsUnder(prefix string, recursive bool) []*Concept {
 			directory = ""
 		}
 		if recursive {
-			if prefix == "" || directory == prefix || strings.HasPrefix(directory, prefix+"/") {
+			if directoryUnder(directory, prefix) {
 				concepts = append(concepts, concept)
 			}
 		} else if directory == prefix {
@@ -183,6 +183,38 @@ func (b *Bundle) ConceptsUnder(prefix string, recursive bool) []*Concept {
 	}
 	sort.Slice(concepts, func(i, j int) bool { return concepts[i].ID < concepts[j].ID })
 	return concepts
+}
+
+// ConceptsUnderLevel returns concepts under prefix through the given one-based
+// directory level. A level of one includes concepts directly in prefix.
+func (b *Bundle) ConceptsUnderLevel(prefix string, maxLevel int) []*Concept {
+	concepts := make([]*Concept, 0)
+	if maxLevel < 1 {
+		return concepts
+	}
+	for _, concept := range b.Concepts {
+		directory := filepath.ToSlash(filepath.Dir(concept.RelPath))
+		if directory == "." {
+			directory = ""
+		}
+		if directoryUnder(directory, prefix) && directoryLevel(directory, prefix) <= maxLevel {
+			concepts = append(concepts, concept)
+		}
+	}
+	sort.Slice(concepts, func(i, j int) bool { return concepts[i].ID < concepts[j].ID })
+	return concepts
+}
+
+func directoryUnder(directory, prefix string) bool {
+	return prefix == "" || directory == prefix || strings.HasPrefix(directory, prefix+"/")
+}
+
+func directoryLevel(directory, prefix string) int {
+	relative := strings.Trim(strings.TrimPrefix(directory, prefix), "/")
+	if relative == "" {
+		return 1
+	}
+	return strings.Count(relative, "/") + 2
 }
 
 func CanonicalID(value string) (string, error) {
