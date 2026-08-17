@@ -45,6 +45,9 @@ func (markdownRenderer) Render(w io.Writer, view View) error {
 func renderMarkdownList(w io.Writer, view ListView) error {
 	if view.Heading != "" {
 		fmt.Fprintf(w, "# %s\n\n", view.Heading)
+		if description := strings.TrimSpace(view.Description); description != "" {
+			fmt.Fprintf(w, "%s\n\n", description)
+		}
 	}
 	for _, directory := range view.Directories {
 		fmt.Fprintf(w, "* [%s](%s/)\n", filepath.Base(directory.Path), directory.Path)

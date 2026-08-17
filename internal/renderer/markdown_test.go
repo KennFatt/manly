@@ -14,6 +14,40 @@ func renderForTest(t *testing.T, view View) string {
 	return output.String()
 }
 
+func TestMarkdownListBundleDescription(t *testing.T) {
+	tests := []struct {
+		name        string
+		description string
+		want        string
+	}{
+		{
+			name:        "present",
+			description: "Shared engineering conventions.",
+			want:        "# Engineering Preferences\n\n" + "Shared engineering conventions.\n\n" + "* [Naming](/general/naming.md) - Use clear names.\n",
+		},
+		{
+			name: "absent",
+			want: "# Engineering Preferences\n\n" + "* [Naming](/general/naming.md) - Use clear names.\n",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			view := ListView{
+				Heading:     "Engineering Preferences",
+				Description: test.description,
+				Entries: []ListEntry{{Concept: Concept{
+					ID:          "/general/naming",
+					Title:       "Naming",
+					Description: "Use clear names.",
+				}}},
+			}
+			if got := renderForTest(t, view); got != test.want {
+				t.Errorf("Render() = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
 func TestMarkdownSearchNotice(t *testing.T) {
 	tests := []struct {
 		name string

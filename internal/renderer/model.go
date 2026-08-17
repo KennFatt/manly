@@ -54,6 +54,7 @@ type ListView struct {
 	Root        string      `json:"root"`
 	Path        string      `json:"path"`
 	Heading     string      `json:"heading,omitempty"`
+	Description string      `json:"description,omitempty"`
 	Recursive   bool        `json:"recursive"`
 	Directories []Directory `json:"directories"`
 	Entries     []ListEntry `json:"entries"`
