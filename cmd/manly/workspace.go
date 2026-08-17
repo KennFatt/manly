@@ -65,6 +65,53 @@ func allWorkspaceRefs(workspace *knowledge.Workspace) []knowledge.ConceptRef {
 	return refs
 }
 
+func workspaceRefsAtLevel(workspace *knowledge.Workspace, maxLevel int) []knowledge.ConceptRef {
+	refs := make([]knowledge.ConceptRef, 0)
+	if maxLevel < 2 {
+		return refs
+	}
+	for _, bundle := range workspace.Bundles {
+		name := workspaceName(workspace, bundle)
+		concepts := bundle.ConceptsUnderLevel("", maxLevel-1)
+		refs = append(refs, refsForBundle(workspace, name, bundle, concepts)...)
+	}
+	return refs
+}
+
+func workspaceDirectoriesAtLevel(workspace *knowledge.Workspace, maxLevel int) []renderer.Directory {
+	seen := make(map[string]renderer.Directory)
+	if maxLevel < 1 {
+		return []renderer.Directory{}
+	}
+	for _, bundle := range workspace.Bundles {
+		name := workspaceName(workspace, bundle)
+		bundlePath := "/" + name
+		if maxLevel == 1 {
+			seen[bundlePath] = renderer.Directory{
+				Path:        bundlePath,
+				Count:       len(bundle.Concepts),
+				Description: bundle.Description,
+			}
+			continue
+		}
+		for _, directory := range directoriesAtLevel(bundle, "", maxLevel-1) {
+			prefix := trimDirectoryPrefix(directory)
+			path := bundlePath + directory
+			seen[path] = renderer.Directory{
+				Path:        path,
+				Count:       countConceptsUnder(bundle, prefix),
+				Description: bundle.MetadataForDirectory(prefix).Description,
+			}
+		}
+	}
+	result := make([]renderer.Directory, 0, len(seen))
+	for _, directory := range seen {
+		result = append(result, directory)
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].Path < result[j].Path })
+	return result
+}
+
 func workspaceName(workspace *knowledge.Workspace, bundle *knowledge.Bundle) string {
 	if workspace.SingleRoot {
 		return ""
@@ -131,17 +178,25 @@ func workspaceDirectoryEntries(workspace *knowledge.Workspace, name string, bund
 	return entries
 }
 
-func renderWorkspaceRecursiveList(workspace *knowledge.Workspace, format outputFormat, display config.Display) error {
+func renderWorkspaceRecursiveList(workspace *knowledge.Workspace, level *int, format outputFormat, display config.Display) error {
 	refs := allWorkspaceRefs(workspace)
+	directories := []renderer.Directory(nil)
+	showDirectories := level != nil
+	if level != nil {
+		refs = workspaceRefsAtLevel(workspace, *level)
+		directories = workspaceDirectoriesAtLevel(workspace, *level)
+	}
 	return renderOutput(os.Stdout, format, renderer.ListView{
-		Root:        workspace.Root,
-		Path:        "/",
-		Heading:     "Knowledge Workspace",
-		Description: workspace.Description,
-		Recursive:   true,
-		Entries:     conceptEntries(displayRefs(workspace, refs), display.Actions),
-		HideActions: !display.Actions,
-		HideUsage:   !display.Usage,
+		Root:            workspace.Root,
+		Path:            "/",
+		Heading:         "Knowledge Workspace",
+		Description:     workspace.Description,
+		Recursive:       true,
+		ShowDirectories: showDirectories,
+		Directories:     directories,
+		Entries:         conceptEntries(displayRefs(workspace, refs), display.Actions),
+		HideActions:     !display.Actions,
+		HideUsage:       !display.Usage,
 	})
 }
 
@@ -167,28 +222,27 @@ func renderWorkspaceRootList(workspace *knowledge.Workspace, format outputFormat
 	})
 }
 
-func renderWorkspaceDirectory(workspace *knowledge.Workspace, bundle *knowledge.Bundle, name, prefix string, recursive bool, format outputFormat, display config.Display) error {
-	concepts := bundle.ConceptsUnder(prefix, recursive)
+func renderWorkspaceDirectory(workspace *knowledge.Workspace, bundle *knowledge.Bundle, name, prefix string, recursive bool, level *int, format outputFormat, display config.Display) error {
+	concepts := listConcepts(bundle, prefix, recursive, level)
 	refs := refsForBundle(workspace, name, bundle, concepts)
-	directories := childDirectories(bundle, prefix)
+	directories := listDirectories(bundle, prefix, recursive, level)
 	displayPath := "/" + name
 	if prefix != "" {
 		displayPath += "/" + prefix
 	}
 	view := renderer.ListView{
-		Root:        workspace.Root,
-		Path:        displayPath,
-		Heading:     bundleDirectoryTitle(bundle, prefix),
-		Description: bundleDescription(bundle, prefix),
-		Recursive:   recursive,
-		Entries:     conceptEntries(displayRefs(workspace, refs), display.Actions),
-		HideActions: !display.Actions,
-		HideUsage:   !display.Usage,
+		Root:            workspace.Root,
+		Path:            displayPath,
+		Heading:         bundleDirectoryTitle(bundle, prefix),
+		Description:     bundleDescription(bundle, prefix),
+		Recursive:       recursive,
+		ShowDirectories: level != nil,
+		Directories:     workspaceDirectoryEntries(workspace, name, bundle, directories),
+		Entries:         conceptEntries(displayRefs(workspace, refs), display.Actions),
+		HideActions:     !display.Actions,
+		HideUsage:       !display.Usage,
 	}
-	if recursive {
-		view.Directories = workspaceDirectoryEntries(workspace, name, bundle, directories)
-	} else {
-		view.Directories = workspaceDirectoryEntries(workspace, name, bundle, directories)
+	if !recursive {
 		view.Count = countConceptsUnder(bundle, prefix)
 	}
 	return renderOutput(os.Stdout, format, view)

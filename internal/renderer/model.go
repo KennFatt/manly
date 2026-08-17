@@ -53,16 +53,17 @@ type ListEntry struct {
 
 // ListView contains directory listing data.
 type ListView struct {
-	Root        string      `json:"root"`
-	Path        string      `json:"path"`
-	Heading     string      `json:"heading,omitempty"`
-	Description string      `json:"description,omitempty"`
-	Recursive   bool        `json:"recursive"`
-	Directories []Directory `json:"directories"`
-	Entries     []ListEntry `json:"entries"`
-	Count       int         `json:"count,omitempty"`
-	HideActions bool        `json:"-"`
-	HideUsage   bool        `json:"-"`
+	Root            string      `json:"root"`
+	Path            string      `json:"path"`
+	Heading         string      `json:"heading,omitempty"`
+	Description     string      `json:"description,omitempty"`
+	Recursive       bool        `json:"recursive"`
+	Directories     []Directory `json:"directories"`
+	Entries         []ListEntry `json:"entries"`
+	Count           int         `json:"count,omitempty"`
+	ShowDirectories bool        `json:"-"`
+	HideActions     bool        `json:"-"`
+	HideUsage       bool        `json:"-"`
 }
 
 func (ListView) view() {}

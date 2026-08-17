@@ -10,26 +10,29 @@ import (
 	"github.com/KennFatt/manly/internal/renderer"
 )
 
-func renderConceptList(root string, bundle *knowledge.Bundle, prefix string, concepts []*knowledge.Concept, format outputFormat, heading string, display config.Display) error {
+func renderConceptList(root string, bundle *knowledge.Bundle, prefix string, concepts []*knowledge.Concept, directories []string, format outputFormat, heading string, display config.Display) error {
 	view := renderer.ListView{
-		Root:        root,
-		Path:        heading,
-		Heading:     heading,
-		Description: bundleDescription(bundle, prefix),
-		Recursive:   true,
-		Entries:     conceptEntries(concepts, display.Actions),
-		HideActions: !display.Actions,
-		HideUsage:   !display.Usage,
+		Root:            root,
+		Path:            heading,
+		Heading:         heading,
+		Description:     bundleDescription(bundle, prefix),
+		Recursive:       true,
+		ShowDirectories: len(directories) > 0,
+		Directories:     directoryEntries(directories, bundle),
+		Entries:         conceptEntries(concepts, display.Actions),
+		HideActions:     !display.Actions,
+		HideUsage:       !display.Usage,
 	}
 	return renderOutput(os.Stdout, format, view)
 }
 
-func renderAgentConceptList(root string, prefix string, concepts []*knowledge.Concept) error {
+func renderAgentConceptList(root string, prefix string, concepts []*knowledge.Concept, directories []string) error {
 	view := renderer.ListView{
-		Root:      root,
-		Path:      directoryDisplay(prefix),
-		Recursive: true,
-		Entries:   conceptEntries(concepts, false),
+		Root:        root,
+		Path:        directoryDisplay(prefix),
+		Recursive:   true,
+		Directories: directoryEntries(directories, nil),
+		Entries:     conceptEntries(concepts, false),
 	}
 	return renderOutput(os.Stdout, formatAgent, view)
 }

@@ -34,7 +34,29 @@ func TestCLIWorkflow(t *testing.T) {
 	assertCommandContains(t, root, []string{"list", "--recursive", "--format", "markdown"}, "# Knowledge Bundle", "/group/b.md")
 	assertCommandContains(t, root, []string{"list", "--recursive", "--format", "json"}, `"recursive": true`, `"/group/b"`)
 	assertCommandContains(t, root, []string{"list", "--recursive", "--format", "agent"}, `"concepts"`, `"/group/b"`, `"type"`, `"tags"`)
-	output, err := runCommand(t, root, "list", "--recursive", "--format", "agent")
+	output, err := runCommand(t, root, "list", "--recursive", "--level", "1", "--format", "agent")
+	if err != nil || !strings.Contains(output, `"/a"`) || !strings.Contains(output, `"/group"`) || strings.Contains(output, `"/group/b"`) {
+		t.Fatalf("level one list = %q, %v", output, err)
+	}
+	output, err = runCommand(t, root, "list", "/group", "--recursive", "--level", "1", "--format", "agent")
+	if err != nil || !strings.Contains(output, `"/group/b"`) || strings.Contains(output, `"/group/nested/c"`) {
+		t.Fatalf("directory level one list = %q, %v", output, err)
+	}
+	output, err = runCommand(t, root, "list", "/group", "--recursive", "--level", "2", "--format", "agent")
+	if err != nil || !strings.Contains(output, `"/group/nested/c"`) {
+		t.Fatalf("directory level two list = %q, %v", output, err)
+	}
+	output, err = runCommand(t, root, "list", "--recursive", "--level", "10", "--format", "agent")
+	if err != nil || strings.Contains(output, `"directories":["`) {
+		t.Fatalf("deep level list = %q, %v", output, err)
+	}
+	if _, err := runCommand(t, root, "list", "--level", "1"); err == nil || !strings.Contains(err.Error(), "requires --recursive") {
+		t.Fatalf("level without recursion error = %v", err)
+	}
+	if _, err := runCommand(t, root, "list", "--recursive", "--level", "0"); err == nil || !strings.Contains(err.Error(), "at least 1") {
+		t.Fatalf("invalid level error = %v", err)
+	}
+	output, err = runCommand(t, root, "list", "--recursive", "--format", "agent")
 	if err != nil || strings.Contains(output, `"root"`) || strings.Contains(output, `"entries"`) || strings.Contains(output, `"actions"`) {
 		t.Fatalf("agent list = %q, %v", output, err)
 	}
@@ -166,13 +188,21 @@ func TestCLIWorkspaceMarkdownDescriptions(t *testing.T) {
 	}
 
 	output, err = runCommand(t, root, "list", "--recursive", "--format", "markdown")
-	if err != nil || !strings.Contains(output, "# Knowledge Workspace\n\nWorkspace description.") || !strings.Contains(output, "* [Naming](/bundle-a/general/naming.md) - Use clear names.") {
+	if err != nil || !strings.Contains(output, "# Knowledge Workspace\n\nWorkspace description.") || !strings.Contains(output, "* [Naming](/bundle-a/general/naming.md) - Use clear names.") || strings.Contains(output, "* [bundle-a](/bundle-a/)") {
 		t.Fatalf("recursive workspace list = %q, %v", output, err)
 	}
-	if strings.Contains(output, "* [bundle-a](/bundle-a/)") {
-		t.Fatalf("recursive workspace list introduced a bundle row: %q", output)
+	output, err = runCommand(t, root, "list", "--recursive", "--level", "1", "--format", "agent")
+	if err != nil || !strings.Contains(output, "/bundle-a") || !strings.Contains(output, "/bundle-b") || strings.Contains(output, "/bundle-a/general/naming") {
+		t.Fatalf("workspace level one list = %q, %v", output, err)
 	}
-
+	output, err = runCommand(t, root, "list", "--recursive", "--level", "2", "--format", "agent")
+	if err != nil || !strings.Contains(output, "/bundle-a/general") || strings.Contains(output, "/bundle-a/general/naming") {
+		t.Fatalf("workspace level two list = %q, %v", output, err)
+	}
+	output, err = runCommand(t, root, "list", "--recursive", "--level", "3", "--format", "agent")
+	if err != nil || !strings.Contains(output, "/bundle-a/general/naming") {
+		t.Fatalf("workspace level three list = %q, %v", output, err)
+	}
 	output, err = runCommand(t, root, "list", "/bundle-a", "--recursive", "--format", "markdown")
 	if err != nil || !strings.Contains(output, "* [general](/bundle-a/general/) - General directory description.") {
 		t.Fatalf("recursive bundle list = %q, %v", output, err)
@@ -335,6 +365,11 @@ func TestCLIConfigDefaultsAndOverrides(t *testing.T) {
 	})
 	if err != nil || !strings.Contains(output, "nested") || strings.Contains(output, "List: manly list") || strings.Contains(output, "Details: manly show") {
 		t.Fatalf("CLI list overrides = %q, %v", output, err)
+	}
+	if _, err := captureOutput(t, func() error {
+		return run([]string{"list", "--no-recursive", "--level", "1"})
+	}); err == nil || !strings.Contains(err.Error(), "requires --recursive") {
+		t.Fatalf("configured recursion level override error = %v", err)
 	}
 	output, err = captureOutput(t, func() error { return run([]string{"show", "/nested/note"}) })
 	if err != nil || strings.Contains(output, `"actions"`) {
