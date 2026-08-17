@@ -37,10 +37,12 @@ type Action struct {
 	Command string `json:"command"`
 }
 
-// Directory contains a directory path and its concept count.
+// Directory contains a directory path, its concept count, and optional
+// Markdown presentation metadata.
 type Directory struct {
-	Path  string `json:"path"`
-	Count int    `json:"count"`
+	Path        string `json:"path"`
+	Count       int    `json:"count"`
+	Description string `json:"-"`
 }
 
 // ListEntry contains one concept and its available actions.

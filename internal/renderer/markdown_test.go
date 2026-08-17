@@ -48,6 +48,64 @@ func TestMarkdownListBundleDescription(t *testing.T) {
 	}
 }
 
+func TestMarkdownListDirectoryDescriptions(t *testing.T) {
+	tests := []struct {
+		name        string
+		description string
+		want        string
+	}{
+		{
+			name:        "present",
+			description: "  General engineering practices.  ",
+			want:        "* [general](/general/) - General engineering practices.\n",
+		},
+		{
+			name: "absent",
+			want: "* [general](/general/)\n",
+		},
+		{
+			name:        "whitespace",
+			description: " \t\n ",
+			want:        "* [general](/general/)\n",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			view := ListView{Directories: []Directory{{Path: "/general", Description: test.description}}}
+			if got := renderForTest(t, view); got != test.want {
+				t.Errorf("Render() = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func TestMarkdownListHeadingAndChildDescriptions(t *testing.T) {
+	view := ListView{
+		Heading:     "Engineering Preferences",
+		Description: "Coding standards.",
+		Directories: []Directory{{Path: "/general", Description: "General practices."}},
+		Entries: []ListEntry{{Concept: Concept{
+			ID:          "/general/naming",
+			Title:       "Naming",
+			Description: "Use clear names.",
+		}}},
+	}
+	want := "# Engineering Preferences\n\nCoding standards.\n\n" +
+		"* [general](/general/) - General practices.\n" +
+		"* [Naming](/general/naming.md) - Use clear names.\n"
+	if got := renderForTest(t, view); got != want {
+		t.Errorf("Render() = %q, want %q", got, want)
+	}
+}
+
+func TestMarkdownListOmitsMissingConceptDescription(t *testing.T) {
+	view := ListView{Entries: []ListEntry{{Concept: Concept{ID: "/legacy", Title: "Legacy"}}}}
+	want := "* [Legacy](/legacy.md)\n"
+	if got := renderForTest(t, view); got != want {
+		t.Errorf("Render() = %q, want %q", got, want)
+	}
+}
+
 func TestMarkdownSearchNotice(t *testing.T) {
 	tests := []struct {
 		name string
