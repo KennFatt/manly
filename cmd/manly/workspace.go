@@ -118,10 +118,15 @@ func workspaceDirectoryEntries(workspace *knowledge.Workspace, name string, bund
 	entries := make([]renderer.Directory, 0, len(directories))
 	for _, directory := range directories {
 		path := directory
+		prefix := trimDirectoryPrefix(directory)
 		if name != "" {
 			path = "/" + name + "/" + strings.TrimPrefix(directory, "/")
 		}
-		entries = append(entries, renderer.Directory{Path: path, Count: countConceptsUnder(bundle, trimDirectoryPrefix(directory))})
+		entries = append(entries, renderer.Directory{
+			Path:        path,
+			Count:       countConceptsUnder(bundle, prefix),
+			Description: bundle.MetadataForDirectory(prefix).Description,
+		})
 	}
 	return entries
 }
@@ -132,6 +137,7 @@ func renderWorkspaceRecursiveList(workspace *knowledge.Workspace, format outputF
 		Root:        workspace.Root,
 		Path:        "/",
 		Heading:     "Knowledge Workspace",
+		Description: workspace.Description,
 		Recursive:   true,
 		Entries:     conceptEntries(displayRefs(workspace, refs), display.Actions),
 		HideActions: !display.Actions,
@@ -143,13 +149,18 @@ func renderWorkspaceRootList(workspace *knowledge.Workspace, format outputFormat
 	directories := make([]renderer.Directory, 0, len(workspace.Bundles))
 	for _, bundle := range workspace.Bundles {
 		name := workspaceName(workspace, bundle)
-		directories = append(directories, renderer.Directory{Path: "/" + name, Count: len(bundle.Concepts)})
+		directories = append(directories, renderer.Directory{
+			Path:        "/" + name,
+			Count:       len(bundle.Concepts),
+			Description: bundle.Description,
+		})
 	}
 	sort.Slice(directories, func(i, j int) bool { return directories[i].Path < directories[j].Path })
 	return renderOutput(os.Stdout, format, renderer.ListView{
 		Root:        workspace.Root,
 		Path:        "/",
 		Heading:     "Knowledge Workspace",
+		Description: workspace.Description,
 		Directories: directories,
 		HideActions: !display.Actions,
 		HideUsage:   !display.Usage,

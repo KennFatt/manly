@@ -105,6 +105,87 @@ func TestCLIListMarkdownShowsRootBundleDescription(t *testing.T) {
 	}
 }
 
+func TestCLIWorkspaceMarkdownDescriptions(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("MANLY_ROOT", "")
+	root := t.TempDir()
+	writeCLIFile(t, root, "index.md", "---\ndescription: Workspace description.\n---\n")
+	writeCLIFile(t, root, "bundle-a/index.md", "---\nokf_version: \"0.1\"\ntype: Bundle\ntitle: Bundle A\ndescription: Bundle A description.\n---\n")
+	writeCLIFile(t, root, "bundle-a/general/index.md", "---\ntitle: General\ndescription: General directory description.\n---\n")
+	writeCLIFile(t, root, "bundle-a/general/naming.md", "---\ntype: Guideline\ntitle: Naming\ndescription: Use clear names.\n---\n")
+	writeCLIFile(t, root, "bundle-a/empty-directory/index.md", "---\ntitle: Empty Directory\ndescription: Should stay undiscoverable.\n---\n")
+	writeCLIFile(t, root, "bundle-b/index.md", "---\nokf_version: \"0.1\"\ntype: Bundle\ntitle: Bundle B\n---\n")
+
+	output, err := runCommand(t, root, "list", "--format", "markdown")
+	if err != nil {
+		t.Fatalf("workspace list = %q, %v", output, err)
+	}
+	for _, fragment := range []string{
+		"# Knowledge Workspace\n\nWorkspace description.",
+		"* [bundle-a](/bundle-a/) - Bundle A description.",
+		"* [bundle-b](/bundle-b/)",
+	} {
+		if !strings.Contains(output, fragment) {
+			t.Fatalf("workspace list %q does not contain %q", output, fragment)
+		}
+	}
+	if strings.Contains(output, "* [bundle-b](/bundle-b/) -") {
+		t.Fatalf("bundle without description has a suffix: %q", output)
+	}
+
+	output, err = runCommand(t, root, "list", "/bundle-a", "--format", "markdown")
+	if err != nil {
+		t.Fatalf("bundle list = %q, %v", output, err)
+	}
+	for _, fragment := range []string{
+		"# Bundle A\n\nBundle A description.",
+		"* [general](/bundle-a/general/) - General directory description.",
+	} {
+		if !strings.Contains(output, fragment) {
+			t.Fatalf("bundle list %q does not contain %q", output, fragment)
+		}
+	}
+	if strings.Contains(output, "empty-directory") || strings.Count(output, "Bundle A description.") != 1 {
+		t.Fatalf("bundle list inherited or discovered wrong metadata: %q", output)
+	}
+
+	output, err = runCommand(t, root, "list", "/bundle-a/general", "--format", "markdown")
+	if err != nil {
+		t.Fatalf("directory list = %q, %v", output, err)
+	}
+	for _, fragment := range []string{
+		"# General\n\nGeneral directory description.",
+		"* [Naming](/bundle-a/general/naming.md) - Use clear names.",
+	} {
+		if !strings.Contains(output, fragment) {
+			t.Fatalf("directory list %q does not contain %q", output, fragment)
+		}
+	}
+	if strings.Contains(output, "Bundle A description.") {
+		t.Fatalf("directory list inherited bundle description: %q", output)
+	}
+
+	output, err = runCommand(t, root, "list", "--recursive", "--format", "markdown")
+	if err != nil || !strings.Contains(output, "# Knowledge Workspace\n\nWorkspace description.") || !strings.Contains(output, "* [Naming](/bundle-a/general/naming.md) - Use clear names.") {
+		t.Fatalf("recursive workspace list = %q, %v", output, err)
+	}
+	if strings.Contains(output, "* [bundle-a](/bundle-a/)") {
+		t.Fatalf("recursive workspace list introduced a bundle row: %q", output)
+	}
+
+	output, err = runCommand(t, root, "list", "/bundle-a", "--recursive", "--format", "markdown")
+	if err != nil || !strings.Contains(output, "* [general](/bundle-a/general/) - General directory description.") {
+		t.Fatalf("recursive bundle list = %q, %v", output, err)
+	}
+
+	for _, format := range []string{"compact", "fancy", "json", "agent"} {
+		output, err = runCommand(t, root, "list", "--format", format)
+		if err != nil || strings.Contains(output, "Workspace description.") || strings.Contains(output, "Bundle A description.") {
+			t.Fatalf("non-Markdown workspace list (%s) = %q, %v", format, output, err)
+		}
+	}
+}
+
 func TestCLIAnalyticsRecordsSuccessfulFullContentOnly(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("MANLY_ROOT", "")

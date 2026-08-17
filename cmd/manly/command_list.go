@@ -136,10 +136,10 @@ func bundleDirectoryTitle(bundle *knowledge.Bundle, prefix string) string {
 }
 
 func bundleDescription(bundle *knowledge.Bundle, prefix string) string {
-	if prefix != "" {
-		return ""
+	if prefix == "" {
+		return bundle.Description
 	}
-	return bundle.Description
+	return bundle.MetadataForDirectory(prefix).Description
 }
 
 func directoryTitle(prefix string) string {

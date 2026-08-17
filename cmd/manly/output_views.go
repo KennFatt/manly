@@ -80,11 +80,14 @@ func conceptEntries(concepts []*knowledge.Concept, showActions ...bool) []render
 func directoryEntries(directories []string, bundle *knowledge.Bundle) []renderer.Directory {
 	entries := make([]renderer.Directory, 0, len(directories))
 	for _, directory := range directories {
+		prefix := trimDirectoryPrefix(directory)
 		count := 0
+		description := ""
 		if bundle != nil {
-			count = countConceptsUnder(bundle, trimDirectoryPrefix(directory))
+			count = countConceptsUnder(bundle, prefix)
+			description = bundle.MetadataForDirectory(prefix).Description
 		}
-		entries = append(entries, renderer.Directory{Path: directory, Count: count})
+		entries = append(entries, renderer.Directory{Path: directory, Count: count, Description: description})
 	}
 	return entries
 }
