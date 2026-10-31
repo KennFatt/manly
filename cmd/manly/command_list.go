@@ -205,6 +205,9 @@ func bundleDirectoryTitle(bundle *knowledge.Bundle, prefix string) string {
 	if prefix == "" && bundle.Title != "" {
 		return bundle.Title
 	}
+	if title := bundle.MetadataForDirectory(prefix).Title; title != "" {
+		return title
+	}
 	return directoryTitle(prefix)
 }
 

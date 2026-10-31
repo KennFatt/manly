@@ -129,7 +129,16 @@ Nested `index.md` files organize directories:
 engineering-preferences/react/index.md
 ```
 
-They are not bundle roots and must not contain bundle frontmatter.
+They are not bundle roots, and their frontmatter is presentation metadata only:
+
+```yaml
+---
+title: React
+description: React conventions for components, hooks, and data flow.
+---
+```
+
+`manly` reads `title` and `description` from a nested index and ignores every other key, including `okf_version` and `type: Bundle`. Bundle identity is enforced only for discovered bundle roots. Allowing nested index frontmatter is a `manly` extension beyond OKF v0.1, which defines frontmatter only on a bundle-root `index.md`. The body of an `index.md` is human documentation at every level; it never becomes a concept.
 
 ## 3. Concept
 

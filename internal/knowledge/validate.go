@@ -106,7 +106,7 @@ func Validate(root string, strict bool) (ValidationReport, error) {
 		}
 		switch filepath.Base(rel) {
 		case "index.md":
-			validateIndex(&report, rel, string(data), markdown)
+			validateIndex(&report, rel, string(data))
 		case "log.md":
 			validateLog(&report, rel, string(data))
 		default:
@@ -175,21 +175,21 @@ func Validate(root string, strict bool) (ValidationReport, error) {
 	return report, nil
 }
 
-func validateIndex(report *ValidationReport, rel, content string, markdown map[string]string) {
-	if rel == "index.md" && strings.HasPrefix(strings.ReplaceAll(content, "\r\n", "\n"), "---\n") {
+// validateIndex accepts optional frontmatter on an index at any depth. Manly
+// treats nested index metadata as presentation only; bundle identity is still
+// enforced for discovered bundle roots by validateBundleMetadata.
+func validateIndex(report *ValidationReport, rel, content string) {
+	if strings.HasPrefix(strings.ReplaceAll(content, "\r\n", "\n"), "---\n") {
 		metadata, _, err := parseFrontmatter(content)
 		if err != nil {
 			report.AddError(rel, err.Error())
 		} else if value, exists := metadata["okf_version"]; exists && strings.TrimSpace(fmt.Sprint(value)) == "" {
 			report.AddError(rel, "okf_version must not be empty when present")
 		}
-	} else if rel != "index.md" && strings.HasPrefix(strings.ReplaceAll(content, "\r\n", "\n"), "---\n") {
-		report.AddError(rel, "non-root index.md must not contain frontmatter")
 	}
 	if !strings.Contains(content, "](") {
 		report.AddWarning(rel, "index has no directory entries")
 	}
-	_ = markdown
 }
 
 var logDatePattern = regexp.MustCompile(`^##\s+(.+?)\s*$`)

@@ -205,3 +205,28 @@ func hasIssue(issues []Issue, fragment string) bool {
 	}
 	return false
 }
+
+func TestValidateAcceptsNestedIndexFrontmatter(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, root, "index.md", "---\nokf_version: \"0.1\"\ntype: Bundle\n---\n\n* [Group](group/index.md)\n")
+	writeTestFile(t, root, "group/index.md", "---\nokf_version: \"0.1\"\ntype: Bundle\ntitle: Group\ndescription: Group directory.\ntags: [group]\n---\n\n* [Child](child.md)\n")
+	writeTestConcept(t, root, "group/child.md", "Child", "Child body.")
+	writeTestFile(t, root, "group/deep/index.md", "---\ntitle: Deep\ndescription: Deep directory.\n---\n\n* [Child](../child.md)\n")
+
+	report, err := Validate(root, true)
+	if err != nil {
+		t.Fatalf("Validate() error = %v", err)
+	}
+	if !report.Valid() {
+		t.Fatalf("nested index frontmatter rejected: %#v", report.Errors)
+	}
+
+	writeTestFile(t, root, "group/broken/index.md", "---\ntitle: [broken\n---\n\n* [Child](../child.md)\n")
+	report, err = Validate(root, false)
+	if err != nil {
+		t.Fatalf("Validate() error = %v", err)
+	}
+	if report.Valid() || !hasIssue(report.Errors, "frontmatter is not valid YAML") {
+		t.Fatalf("malformed nested index frontmatter accepted: %#v", report.Errors)
+	}
+}
