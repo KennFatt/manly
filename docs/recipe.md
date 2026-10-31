@@ -606,7 +606,7 @@ manly check --strict --format fancy
 
 - YAML frontmatter validity
 - Non-empty concept types
-- Reserved OKF file constraints (`index.md`, `log.md`)
+- Reserved OKF file constraints: `log.md` must not contain frontmatter and must have valid date headings; `index.md` frontmatter is optional at any depth and is parsed for `title` and `description`
 - Timestamp formats
 - Missing local link targets, reported as warnings
 - Stale generated indexes when `--strict` is enabled

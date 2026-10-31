@@ -467,3 +467,23 @@ func writeCLIFile(t *testing.T, root, name, content string) {
 		t.Fatal(err)
 	}
 }
+
+func TestCLINestedIndexTitleHeading(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("MANLY_ROOT", "")
+	root := t.TempDir()
+	writeCLIFile(t, root, "index.md", "---\nokf_version: \"0.1\"\ntype: Bundle\n---\n")
+	writeCLIFile(t, root, "css/index.md", "---\ntitle: CSS Guidelines\ndescription: Practical CSS guidance.\n---\n")
+	writeCLIFile(t, root, "css/fundamentals.md", "---\ntype: Guideline\ntitle: CSS Fundamentals\n---\n")
+
+	output, err := runCommand(t, root, "list", "/css", "--format", "markdown")
+	if err != nil || !strings.Contains(output, "# CSS Guidelines") || !strings.Contains(output, "Practical CSS guidance.") {
+		t.Fatalf("nested title heading = %q, %v", output, err)
+	}
+
+	writeCLIFile(t, root, "css/index.md", "# CSS\n")
+	output, err = runCommand(t, root, "list", "/css", "--format", "markdown")
+	if err != nil || !strings.Contains(output, "# Css") {
+		t.Fatalf("fallback heading = %q, %v", output, err)
+	}
+}

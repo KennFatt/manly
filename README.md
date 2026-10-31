@@ -184,6 +184,17 @@ description: Shared engineering conventions and references.
 
 `manly list --format markdown` renders a non-empty bundle description below the root heading. Nested directory listings do not inherit it.
 
+Nested `index.md` files are optional and may carry their own frontmatter. `manly` reads only `title` and `description` from them and uses both when listing that directory; every other key, including `okf_version` and `type: Bundle`, is ignored for nested indexes:
+
+```yaml
+---
+title: CSS Guidelines
+description: Practical CSS guidance for responsive sizing, layout, and typography.
+---
+```
+
+**This is a `manly` extension.** OKF v0.1 defines frontmatter only on a bundle-root `index.md`, so a bundle with nested index frontmatter is more permissive than the upstream spec. The body of any `index.md` is documentation for humans: it never becomes a concept and stays out of search, links, and graph output.
+
 A concept can link to another concept with standard Markdown:
 
 ```markdown
