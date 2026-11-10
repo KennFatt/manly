@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -158,6 +159,12 @@ func resolveWorkspaceConcepts(workspace *knowledge.Workspace, arguments []string
 			seen[id] = true
 		}
 	}
+	slices.SortFunc(selected, func(a, b knowledge.ConceptRef) int {
+		return strings.Compare(
+			workspace.QualifyID(a.BundleName, a.Concept.ID),
+			workspace.QualifyID(b.BundleName, b.Concept.ID),
+		)
+	})
 	return selected, collection, nil
 }
 
