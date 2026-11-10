@@ -95,6 +95,78 @@ func TestCLIWorkflow(t *testing.T) {
 	}
 }
 
+func TestShowMultipleIDsConstantOrder(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("MANLY_ROOT", "")
+	root := t.TempDir()
+	if _, err := runCommand(t, root, "init"); err != nil {
+		t.Fatal(err)
+	}
+	writeCLIFile(t, root, "z.md", "---\ntype: Note\ntitle: Z\n---\n\nZ body.\n")
+	writeCLIFile(t, root, "a.md", "---\ntype: Note\ntitle: A\n---\n\nA body.\n")
+	writeCLIFile(t, root, "group/b.md", "---\ntype: Note\ntitle: Group B\n---\n\nGroup B body.\n")
+	writeCLIFile(t, root, "group/a.md", "---\ntype: Note\ntitle: Group A\n---\n\nGroup A body.\n")
+
+	first, err := runCommand(t, root, "show", "/z", "/a", "--format", "json")
+	if err != nil {
+		t.Fatalf("show /z /a = %q, %v", first, err)
+	}
+	second, err := runCommand(t, root, "show", "/a", "/z", "--format", "json")
+	if err != nil {
+		t.Fatalf("show /a /z = %q, %v", second, err)
+	}
+	if first != second {
+		t.Fatalf("show output depends on argument order:\n%q\n%q", first, second)
+	}
+	if strings.Index(first, `"id": "/a"`) > strings.Index(first, `"id": "/z"`) {
+		t.Fatalf("show output is not sorted by ID ascending: %q", first)
+	}
+
+	first, err = runCommand(t, root, "show", "/z", "/group", "--format", "json")
+	if err != nil {
+		t.Fatalf("show /z /group = %q, %v", first, err)
+	}
+	second, err = runCommand(t, root, "show", "/group", "/z", "--format", "json")
+	if err != nil {
+		t.Fatalf("show /group /z = %q, %v", second, err)
+	}
+	if first != second {
+		t.Fatalf("mixed show output depends on argument order:\n%q\n%q", first, second)
+	}
+	groupA := strings.Index(first, `"id": "/group/a"`)
+	groupB := strings.Index(first, `"id": "/group/b"`)
+	z := strings.Index(first, `"id": "/z"`)
+	if groupA < 0 || groupB < 0 || z < 0 || !(groupA < groupB && groupB < z) {
+		t.Fatalf("mixed show output is not sorted by ID ascending: %q", first)
+	}
+}
+
+func TestWorkspaceShowMultipleIDsConstantOrder(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("MANLY_ROOT", "")
+	root := t.TempDir()
+	writeCLIFile(t, root, "index.md", "---\ndescription: Workspace description.\n---\n")
+	writeCLIFile(t, root, "bundle-a/index.md", "---\nokf_version: \"0.1\"\ntype: Bundle\ntitle: Bundle A\n---\n")
+	writeCLIFile(t, root, "bundle-a/z.md", "---\ntype: Note\ntitle: Z\n---\n\nZ body.\n")
+	writeCLIFile(t, root, "bundle-b/index.md", "---\nokf_version: \"0.1\"\ntype: Bundle\ntitle: Bundle B\n---\n")
+	writeCLIFile(t, root, "bundle-b/a.md", "---\ntype: Note\ntitle: A\n---\n\nA body.\n")
+
+	first, err := runCommand(t, root, "show", "/bundle-b/a", "/bundle-a/z", "--format", "json")
+	if err != nil {
+		t.Fatalf("workspace show = %q, %v", first, err)
+	}
+	second, err := runCommand(t, root, "show", "/bundle-a/z", "/bundle-b/a", "--format", "json")
+	if err != nil {
+		t.Fatalf("workspace show reversed = %q, %v", second, err)
+	}
+	if first != second {
+		t.Fatalf("workspace show output depends on argument order:\n%q\n%q", first, second)
+	}
+	if strings.Index(first, `"id": "/bundle-a/z"`) > strings.Index(first, `"id": "/bundle-b/a"`) {
+		t.Fatalf("workspace show output is not sorted by qualified ID ascending: %q", first)
+	}
+}
+
 func TestCLIListMarkdownShowsRootBundleDescription(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("MANLY_ROOT", "")

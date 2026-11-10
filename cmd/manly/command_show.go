@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"slices"
+	"strings"
 
 	"github.com/KennFatt/manly/internal/analytics"
 	"github.com/KennFatt/manly/internal/knowledge"
@@ -95,5 +97,8 @@ func resolveShowConcepts(bundle *knowledge.Bundle, arguments []string) ([]*knowl
 			seen[concept.ID] = true
 		}
 	}
+	slices.SortFunc(selected, func(a, b *knowledge.Concept) int {
+		return strings.Compare(a.ID, b.ID)
+	})
 	return selected, collection, nil
 }
