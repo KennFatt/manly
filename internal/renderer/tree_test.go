@@ -49,17 +49,61 @@ func TestCompactTree(t *testing.T) {
 		t.Fatalf("Render() error = %v", err)
 	}
 	want := "Bundle  2 concepts\n" +
-		strings.Repeat("y", 100) + "...\n" +
 		"/bundle\n" +
 		"\n" +
-		"├── /bundle/general/  General  2 concepts  General description.  (... 1 subdirectory, 2 concepts below)\n" +
-		"├── /bundle/note  Note  " + strings.Repeat("x", 100) + "...\n" +
-		"└── /bundle/bare  Bare\n" +
+		"├── /bundle/general/  (... 1 subdirectory, 2 concepts below)\n" +
+		"├── /bundle/note\n" +
+		"└── /bundle/bare\n" +
 		"\n" +
 		"Expand: manly tree /bundle --depth 1\n" +
 		"Root: /root\n"
 	if got := output.String(); got != want {
 		t.Errorf("Render() = %q, want %q", got, want)
+	}
+}
+
+func TestTreeSingularConceptCount(t *testing.T) {
+	view := treeTestView()
+	view.ConceptCount = 1
+	view.Nodes = []TreeNode{
+		{
+			Kind:         "directory",
+			Path:         "/bundle/single",
+			Title:        "Single",
+			Description:  "Single description.",
+			ConceptCount: 1,
+		},
+	}
+
+	var compactOutput strings.Builder
+	if err := (compactRenderer{}).Render(&compactOutput, view); err != nil {
+		t.Fatalf("compact Render() error = %v", err)
+	}
+	for _, fragment := range []string{
+		"Bundle  1 concept\n",
+		"└── /bundle/single/  1 concept\n",
+	} {
+		if !strings.Contains(compactOutput.String(), fragment) {
+			t.Errorf("compact tree %q does not contain %q", compactOutput.String(), fragment)
+		}
+	}
+
+	var fancyOutput strings.Builder
+	if err := (fancyRenderer{}).Render(&fancyOutput, view); err != nil {
+		t.Fatalf("fancy Render() error = %v", err)
+	}
+	for _, fragment := range []string{"Bundle  1 concept\n", "/bundle/single/  Single  1 concept\n"} {
+		if !strings.Contains(fancyOutput.String(), fragment) {
+			t.Errorf("fancy tree %q does not contain %q", fancyOutput.String(), fragment)
+		}
+	}
+
+	var markdownOutput strings.Builder
+	if err := (markdownRenderer{}).Render(&markdownOutput, view); err != nil {
+		t.Fatalf("markdown Render() error = %v", err)
+	}
+	if !strings.Contains(markdownOutput.String(), "(1 concept)") {
+		t.Errorf("markdown tree %q does not contain %q", markdownOutput.String(), "(1 concept)")
 	}
 }
 

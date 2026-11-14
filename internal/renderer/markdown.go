@@ -104,7 +104,7 @@ func writeMarkdownTreeNodes(w io.Writer, nodes []TreeNode, depth int) {
 		}
 		fmt.Fprintf(w, "%s* [%s](%s)", indent, label, link)
 		if node.Kind == "directory" {
-			fmt.Fprintf(w, " (%d concepts)", node.ConceptCount)
+			fmt.Fprintf(w, " (%s)", conceptCountLabel(node.ConceptCount))
 		}
 		if node.Type != "" {
 			fmt.Fprintf(w, " - %s", node.Type)

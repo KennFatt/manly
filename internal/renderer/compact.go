@@ -88,10 +88,7 @@ func renderCompactList(w io.Writer, view ListView) error {
 
 func renderCompactTree(w io.Writer, view TreeView) error {
 	if view.Heading != "" {
-		fmt.Fprintf(w, "%s  %d concepts\n", view.Heading, view.ConceptCount)
-	}
-	if description := truncateCompactDescription(view.Description); description != "" {
-		fmt.Fprintln(w, description)
+		fmt.Fprintf(w, "%s  %s\n", view.Heading, conceptCountLabel(view.ConceptCount))
 	}
 	if view.Path != "" {
 		fmt.Fprintln(w, view.Path)
@@ -125,14 +122,8 @@ func compactTreeLabel(node TreeNode) string {
 		label += "/"
 	}
 	parts := []string{label}
-	if node.Title != "" {
-		parts = append(parts, node.Title)
-	}
-	if node.Kind == "directory" {
-		parts = append(parts, fmt.Sprintf("%d concepts", node.ConceptCount))
-	}
-	if description := truncateCompactDescription(node.Description); description != "" {
-		parts = append(parts, description)
+	if node.Kind == "directory" && node.Hidden == nil {
+		parts = append(parts, conceptCountLabel(node.ConceptCount))
 	}
 	if suffix := hiddenSuffix(node.Hidden); suffix != "" {
 		parts = append(parts, suffix)
@@ -140,13 +131,8 @@ func compactTreeLabel(node TreeNode) string {
 	return strings.Join(parts, "  ")
 }
 
-func truncateCompactDescription(description string) string {
-	description = strings.TrimSpace(description)
-	runes := []rune(description)
-	if len(runes) <= 100 {
-		return description
-	}
-	return string(runes[:100]) + "..."
+func conceptCountLabel(count int) string {
+	return fmt.Sprintf("%d %s", count, pluralWord(count, "concept", "concepts"))
 }
 
 func compactListKeyWidth(rows []compactListRow) int {

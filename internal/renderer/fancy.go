@@ -75,7 +75,7 @@ func renderFancyList(w io.Writer, view ListView) error {
 
 func renderFancyTree(w io.Writer, view TreeView) error {
 	if view.Heading != "" {
-		fmt.Fprintf(w, "%s  %d concepts\n\n", view.Heading, view.ConceptCount)
+		fmt.Fprintf(w, "%s  %s\n\n", view.Heading, conceptCountLabel(view.ConceptCount))
 	}
 	if description := strings.TrimSpace(view.Description); description != "" {
 		fmt.Fprintf(w, "%s\n\n", description)
@@ -118,7 +118,7 @@ func fancyTreeLabel(node TreeNode) string {
 		parts = append(parts, "("+node.Type+")")
 	}
 	if node.Kind == "directory" {
-		parts = append(parts, fmt.Sprintf("%d concepts", node.ConceptCount))
+		parts = append(parts, conceptCountLabel(node.ConceptCount))
 	}
 	if suffix := hiddenSuffix(node.Hidden); suffix != "" {
 		parts = append(parts, suffix)
