@@ -112,10 +112,10 @@ func writeMarkdownTreeNodes(w io.Writer, nodes []TreeNode, depth int) {
 		if description := strings.TrimSpace(node.Description); description != "" {
 			fmt.Fprintf(w, " - %s", description)
 		}
-		fmt.Fprintln(w)
-		if node.Hidden != nil {
-			fmt.Fprintf(w, "%s  * %s\n", indent, hiddenText(node.Hidden))
+		if suffix := hiddenSuffix(node.Hidden); suffix != "" {
+			fmt.Fprintf(w, "  %s", suffix)
 		}
+		fmt.Fprintln(w)
 		writeMarkdownTreeNodes(w, node.Children, depth+1)
 	}
 }

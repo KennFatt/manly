@@ -112,17 +112,9 @@ func renderCompactTree(w io.Writer, view TreeView) error {
 
 func writeCompactTreeNodes(w io.Writer, nodes []TreeNode, prefix string) {
 	for index, node := range nodes {
-		last := index == len(nodes)-1
-		connector := "|-- "
-		childPrefix := prefix + "|   "
-		if last {
-			connector = "`-- "
-			childPrefix = prefix + "    "
-		}
+		connector, segment := treeBranch(index == len(nodes)-1)
+		childPrefix := prefix + segment
 		fmt.Fprintf(w, "%s%s%s\n", prefix, connector, compactTreeLabel(node))
-		if node.Hidden != nil {
-			fmt.Fprintf(w, "%s`-- %s\n", childPrefix, hiddenText(node.Hidden))
-		}
 		writeCompactTreeNodes(w, node.Children, childPrefix)
 	}
 }
@@ -141,6 +133,9 @@ func compactTreeLabel(node TreeNode) string {
 	}
 	if description := truncateCompactDescription(node.Description); description != "" {
 		parts = append(parts, description)
+	}
+	if suffix := hiddenSuffix(node.Hidden); suffix != "" {
+		parts = append(parts, suffix)
 	}
 	return strings.Join(parts, "  ")
 }

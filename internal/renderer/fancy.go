@@ -95,19 +95,11 @@ func renderFancyTree(w io.Writer, view TreeView) error {
 
 func writeFancyTreeNodes(w io.Writer, nodes []TreeNode, prefix string) {
 	for index, node := range nodes {
-		last := index == len(nodes)-1
-		connector := "|-- "
-		childPrefix := prefix + "|   "
-		if last {
-			connector = "`-- "
-			childPrefix = prefix + "    "
-		}
+		connector, segment := treeBranch(index == len(nodes)-1)
+		childPrefix := prefix + segment
 		fmt.Fprintf(w, "%s%s%s\n", prefix, connector, fancyTreeLabel(node))
 		if description := strings.TrimSpace(node.Description); description != "" {
 			fmt.Fprintf(w, "%s    %s\n", childPrefix, description)
-		}
-		if node.Hidden != nil {
-			fmt.Fprintf(w, "%s`-- %s\n", childPrefix, hiddenText(node.Hidden))
 		}
 		writeFancyTreeNodes(w, node.Children, childPrefix)
 	}
@@ -127,6 +119,9 @@ func fancyTreeLabel(node TreeNode) string {
 	}
 	if node.Kind == "directory" {
 		parts = append(parts, fmt.Sprintf("%d concepts", node.ConceptCount))
+	}
+	if suffix := hiddenSuffix(node.Hidden); suffix != "" {
+		parts = append(parts, suffix)
 	}
 	return strings.Join(parts, "  ")
 }

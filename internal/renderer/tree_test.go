@@ -52,10 +52,9 @@ func TestCompactTree(t *testing.T) {
 		strings.Repeat("y", 100) + "...\n" +
 		"/bundle\n" +
 		"\n" +
-		"|-- /bundle/general/  General  2 concepts  General description.\n" +
-		"|   `-- ... 1 subdirectory, 2 concepts below\n" +
-		"|-- /bundle/note  Note  " + strings.Repeat("x", 100) + "...\n" +
-		"`-- /bundle/bare  Bare\n" +
+		"├── /bundle/general/  General  2 concepts  General description.  (... 1 subdirectory, 2 concepts below)\n" +
+		"├── /bundle/note  Note  " + strings.Repeat("x", 100) + "...\n" +
+		"└── /bundle/bare  Bare\n" +
 		"\n" +
 		"Expand: manly tree /bundle --depth 1\n" +
 		"Root: /root\n"
@@ -73,12 +72,11 @@ func TestFancyTree(t *testing.T) {
 	for _, fragment := range []string{
 		"Bundle  2 concepts\n",
 		"Bundle description.\n",
-		"|-- /bundle/general/  General  2 concepts\n",
+		"├── /bundle/general/  General  2 concepts  (... 1 subdirectory, 2 concepts below)\n",
 		"General description.\n",
-		"`-- ... 1 subdirectory, 2 concepts below\n",
 		"/bundle/note  Note  (Note)\n",
 		strings.Repeat("x", 101) + "\n",
-		"`-- /bundle/bare  Bare\n",
+		"└── /bundle/bare  Bare\n",
 		"Expand: manly tree /bundle --depth 1\n",
 		"Root: /root\n",
 	} {
@@ -96,8 +94,7 @@ func TestMarkdownTree(t *testing.T) {
 	got := output.String()
 	for _, fragment := range []string{
 		"# Bundle\n\nBundle description.\n\n",
-		"* [General](/bundle/general/) (2 concepts) - General description.\n",
-		"  * ... 1 subdirectory, 2 concepts below\n",
+		"* [General](/bundle/general/) (2 concepts) - General description.  (... 1 subdirectory, 2 concepts below)\n",
 		"* [Note](/bundle/note.md) - Note - " + strings.Repeat("x", 101) + "\n",
 		"* [Bare](/bundle/bare.md)\n",
 		"\n**Root:** /root\n",

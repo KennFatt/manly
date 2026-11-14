@@ -131,6 +131,20 @@ func hiddenText(cut *TreeCut) string {
 	return "... " + strings.Join(parts, ", ") + " below"
 }
 
+func treeBranch(last bool) (connector, childPrefix string) {
+	if last {
+		return "└── ", "    "
+	}
+	return "├── ", "│   "
+}
+
+func hiddenSuffix(cut *TreeCut) string {
+	if cut == nil {
+		return ""
+	}
+	return "(" + hiddenText(cut) + ")"
+}
+
 func pluralWord(count int, singular, plural string) string {
 	if count == 1 {
 		return singular
