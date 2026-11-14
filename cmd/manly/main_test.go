@@ -216,6 +216,72 @@ func TestCLIWorkspaceMarkdownDescriptions(t *testing.T) {
 	}
 }
 
+func TestCLITreeCommand(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("MANLY_ROOT", "")
+	root := t.TempDir()
+	if _, err := runCommand(t, root, "init"); err != nil {
+		t.Fatal(err)
+	}
+	writeCLIFile(t, root, "index.md", "---\nokf_version: \"0.1\"\ntype: Bundle\ntitle: Test Bundle\ndescription: Test bundle description.\n---\n")
+	writeCLIFile(t, root, "general/index.md", "---\ntitle: General\ndescription: General description.\n---\n")
+	writeCLIFile(t, root, "general/naming.md", "---\ntype: Guideline\ntitle: Naming\ndescription: Use clear names.\n---\n")
+	writeCLIFile(t, root, "general/nested/deep.md", "---\ntype: Note\ntitle: Deep\n---\n")
+	writeCLIFile(t, root, "root-note.md", "---\ntype: Note\ntitle: Root Note\n---\n")
+
+	assertCommandContains(t, root, []string{"tree"}, "Test Bundle", "Test bundle description.", "/general/", "General description.", "2 concepts", "/root-note")
+	assertCommandContains(t, root, []string{"tree", "--depth", "1"}, "/general/", "concepts below", "Expand: manly tree / --depth 1")
+	output, err := runCommand(t, root, "tree", "--depth", "1")
+	if err != nil || strings.Contains(output, "/general/naming") || strings.Contains(output, "nested") {
+		t.Fatalf("depth one tree = %q, %v", output, err)
+	}
+	output, err = runCommand(t, root, "tree", "/general", "--depth", "1")
+	if err != nil || !strings.Contains(output, "/general/naming") || !strings.Contains(output, "/general/nested/") {
+		t.Fatalf("path filtered tree = %q, %v", output, err)
+	}
+	assertCommandContains(t, root, []string{"tree", "--format", "json"}, `"heading": "Test Bundle"`, `"kind": "directory"`, `"kind": "concept"`, `"/general/naming"`)
+	output, err = runCommand(t, root, "tree", "--format", "agent")
+	if err != nil || strings.Contains(output, `"root"`) || !strings.Contains(output, `"/general"`) {
+		t.Fatalf("agent tree = %q, %v", output, err)
+	}
+	for _, format := range []string{"fancy", "markdown"} {
+		assertCommandSucceeds(t, root, []string{"tree", "--format", format})
+	}
+	if _, err := runCommand(t, root, "tree", "--depth", "0"); err == nil || !strings.Contains(err.Error(), "--depth must be at least 1") {
+		t.Fatalf("invalid depth error = %v", err)
+	}
+	if _, err := runCommand(t, root, "tree", "/general/naming"); err == nil || !strings.Contains(err.Error(), "tree expects a directory path") {
+		t.Fatalf("concept path error = %v", err)
+	}
+	if _, err := runCommand(t, root, "tree", "/nonexistent"); err == nil || !strings.Contains(err.Error(), "directory not found") {
+		t.Fatalf("missing directory error = %v", err)
+	}
+}
+
+func TestCLITreeWorkspace(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("MANLY_ROOT", "")
+	root := t.TempDir()
+	writeCLIFile(t, root, "index.md", "---\ndescription: Workspace description.\n---\n")
+	writeCLIFile(t, root, "bundle-a/index.md", "---\nokf_version: \"0.1\"\ntype: Bundle\ntitle: Bundle A\ndescription: Bundle A description.\n---\n")
+	writeCLIFile(t, root, "bundle-a/general/naming.md", "---\ntype: Guideline\ntitle: Naming\ndescription: Use clear names.\n---\n")
+	writeCLIFile(t, root, "bundle-b/index.md", "---\nokf_version: \"0.1\"\ntype: Bundle\ntitle: Bundle B\n---\n")
+	writeCLIFile(t, root, "bundle-b/note.md", "---\ntype: Note\ntitle: Note\n---\n")
+
+	assertCommandContains(t, root, []string{"tree"}, "Knowledge Workspace", "Workspace description.", "/bundle-a/", "Bundle A description.", "/bundle-b/")
+	assertCommandContains(t, root, []string{"tree", "--depth", "1"}, "below")
+	output, err := runCommand(t, root, "tree", "/bundle-a")
+	if err != nil || !strings.Contains(output, "/bundle-a/general/") || !strings.Contains(output, "/bundle-a/general/naming") {
+		t.Fatalf("workspace bundle tree = %q, %v", output, err)
+	}
+	if _, err := runCommand(t, root, "tree", "/bundle-a/general/naming"); err == nil || !strings.Contains(err.Error(), "tree expects a directory path") {
+		t.Fatalf("workspace concept path error = %v", err)
+	}
+	if _, err := runCommand(t, root, "tree", "/bundle-a/nonexistent"); err == nil || !strings.Contains(err.Error(), "directory not found") {
+		t.Fatalf("workspace missing directory error = %v", err)
+	}
+}
+
 func TestCLIAnalyticsRecordsSuccessfulFullContentOnly(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("MANLY_ROOT", "")

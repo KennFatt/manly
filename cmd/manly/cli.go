@@ -22,6 +22,7 @@ type cli struct {
 
 	Init      InitCommand      `cmd help:"Initialize an OKF bundle."`
 	List      ListCommand      `cmd help:"List directories or concepts."`
+	Tree      TreeCommand      `cmd help:"Show a hierarchical tree of directories and concepts."`
 	Show      ShowCommand      `cmd help:"Show one or more concepts."`
 	Search    SearchCommand    `cmd help:"Search concepts."`
 	Context   ContextCommand   `cmd help:"Retrieve bounded agent context."`
