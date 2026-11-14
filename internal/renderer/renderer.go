@@ -114,6 +114,44 @@ func matchNotice(confident bool, resultCount int, topConfidence string) string {
 	return ""
 }
 
+func hiddenText(cut *TreeCut) string {
+	if cut == nil {
+		return ""
+	}
+	parts := make([]string, 0, 2)
+	if cut.Directories > 0 {
+		parts = append(parts, fmt.Sprintf("%d %s", cut.Directories, pluralWord(cut.Directories, "subdirectory", "subdirectories")))
+	}
+	if cut.Concepts > 0 {
+		parts = append(parts, fmt.Sprintf("%d %s", cut.Concepts, pluralWord(cut.Concepts, "concept", "concepts")))
+	}
+	if len(parts) == 0 {
+		return "... below"
+	}
+	return "... " + strings.Join(parts, ", ") + " below"
+}
+
+func treeBranch(last bool) (connector, childPrefix string) {
+	if last {
+		return "└── ", "    "
+	}
+	return "├── ", "│   "
+}
+
+func hiddenSuffix(cut *TreeCut) string {
+	if cut == nil {
+		return ""
+	}
+	return "(" + hiddenText(cut) + ")"
+}
+
+func pluralWord(count int, singular, plural string) string {
+	if count == 1 {
+		return singular
+	}
+	return plural
+}
+
 func searchNotice(view SearchView) string {
 	top := ""
 	if len(view.Results) > 0 {
