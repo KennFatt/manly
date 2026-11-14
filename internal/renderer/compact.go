@@ -19,6 +19,8 @@ func (compactRenderer) Render(w io.Writer, view View) error {
 	switch value := view.(type) {
 	case ListView:
 		return renderCompactList(w, value)
+	case TreeView:
+		return renderCompactTree(w, value)
 	case ShowView:
 		return renderCompactShow(w, value)
 	case ShowCollectionView:
@@ -82,6 +84,74 @@ func renderCompactList(w io.Writer, view ListView) error {
 		fmt.Fprintf(w, "Root: %s\n", view.Root)
 	}
 	return nil
+}
+
+func renderCompactTree(w io.Writer, view TreeView) error {
+	if view.Heading != "" {
+		fmt.Fprintf(w, "%s  %d concepts\n", view.Heading, view.ConceptCount)
+	}
+	if description := truncateCompactDescription(view.Description); description != "" {
+		fmt.Fprintln(w, description)
+	}
+	if view.Path != "" {
+		fmt.Fprintln(w, view.Path)
+	}
+	if len(view.Nodes) > 0 {
+		fmt.Fprintln(w)
+		writeCompactTreeNodes(w, view.Nodes, "")
+	}
+	if !view.HideUsage {
+		fmt.Fprintln(w)
+		fmt.Fprintf(w, "Expand: manly tree %s --depth %d\n", view.Path, view.Depth)
+	}
+	if view.Root != "" {
+		fmt.Fprintf(w, "Root: %s\n", view.Root)
+	}
+	return nil
+}
+
+func writeCompactTreeNodes(w io.Writer, nodes []TreeNode, prefix string) {
+	for index, node := range nodes {
+		last := index == len(nodes)-1
+		connector := "|-- "
+		childPrefix := prefix + "|   "
+		if last {
+			connector = "`-- "
+			childPrefix = prefix + "    "
+		}
+		fmt.Fprintf(w, "%s%s%s\n", prefix, connector, compactTreeLabel(node))
+		if node.Hidden != nil {
+			fmt.Fprintf(w, "%s`-- %s\n", childPrefix, hiddenText(node.Hidden))
+		}
+		writeCompactTreeNodes(w, node.Children, childPrefix)
+	}
+}
+
+func compactTreeLabel(node TreeNode) string {
+	label := node.Path
+	if node.Kind == "directory" {
+		label += "/"
+	}
+	parts := []string{label}
+	if node.Title != "" {
+		parts = append(parts, node.Title)
+	}
+	if node.Kind == "directory" {
+		parts = append(parts, fmt.Sprintf("%d concepts", node.ConceptCount))
+	}
+	if description := truncateCompactDescription(node.Description); description != "" {
+		parts = append(parts, description)
+	}
+	return strings.Join(parts, "  ")
+}
+
+func truncateCompactDescription(description string) string {
+	description = strings.TrimSpace(description)
+	runes := []rune(description)
+	if len(runes) <= 100 {
+		return description
+	}
+	return string(runes[:100]) + "..."
 }
 
 func compactListKeyWidth(rows []compactListRow) int {

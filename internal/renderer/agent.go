@@ -11,11 +11,14 @@ func (agentRenderer) Format() Format {
 }
 
 func (agentRenderer) Render(w io.Writer, view View) error {
-	list, ok := view.(ListView)
-	if !ok {
+	switch value := view.(type) {
+	case ListView:
+		return renderAgentList(w, value)
+	case TreeView:
+		return renderAgentTree(w, value)
+	default:
 		return unsupportedView(view)
 	}
-	return renderAgentList(w, list)
 }
 
 type agentConcept struct {
@@ -32,6 +35,30 @@ type agentList struct {
 	Directories []string       `json:"directories"`
 	Concepts    []agentConcept `json:"concepts"`
 	Truncated   bool           `json:"truncated"`
+}
+
+type agentTree struct {
+	Path         string     `json:"path"`
+	Heading      string     `json:"heading,omitempty"`
+	Description  string     `json:"description,omitempty"`
+	Depth        int        `json:"depth"`
+	ConceptCount int        `json:"concept_count"`
+	Nodes        []TreeNode `json:"nodes"`
+}
+
+func renderAgentTree(w io.Writer, view TreeView) error {
+	nodes := view.Nodes
+	if nodes == nil {
+		nodes = []TreeNode{}
+	}
+	return writeJSON(w, agentTree{
+		Path:         view.Path,
+		Heading:      view.Heading,
+		Description:  view.Description,
+		Depth:        view.Depth,
+		ConceptCount: view.ConceptCount,
+		Nodes:        nodes,
+	})
 }
 
 func renderAgentList(w io.Writer, view ListView) error {

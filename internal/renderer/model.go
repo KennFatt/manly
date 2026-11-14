@@ -68,6 +68,39 @@ type ListView struct {
 
 func (ListView) view() {}
 
+// TreeCut describes content hidden below a directory at the depth frontier.
+type TreeCut struct {
+	Directories int `json:"directories"`
+	Concepts    int `json:"concepts"`
+}
+
+// TreeNode contains one directory or concept in a tree view.
+type TreeNode struct {
+	Kind         string     `json:"kind"`
+	Path         string     `json:"path"`
+	Title        string     `json:"title,omitempty"`
+	Description  string     `json:"description,omitempty"`
+	Type         string     `json:"type,omitempty"`
+	Tags         []string   `json:"tags,omitempty"`
+	ConceptCount int        `json:"concept_count,omitempty"`
+	Hidden       *TreeCut   `json:"hidden,omitempty"`
+	Children     []TreeNode `json:"children,omitempty"`
+}
+
+// TreeView contains a bounded hierarchical directory and concept listing.
+type TreeView struct {
+	Root         string     `json:"root,omitempty"`
+	Path         string     `json:"path"`
+	Heading      string     `json:"heading,omitempty"`
+	Description  string     `json:"description,omitempty"`
+	Depth        int        `json:"depth"`
+	ConceptCount int        `json:"concept_count"`
+	Nodes        []TreeNode `json:"nodes"`
+	HideUsage    bool       `json:"-"`
+}
+
+func (TreeView) view() {}
+
 // ShowView contains one complete concept and its relationships.
 type ShowView struct {
 	Concept     Concept  `json:"concept"`

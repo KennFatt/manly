@@ -31,7 +31,7 @@ renderer.Render(writer, view)
    +--> fancy
    +--> json
    +--> markdown
-   +--> agent (list metadata only)
+   +--> agent (list and tree metadata only)
 ```
 
 The dependency direction is:
@@ -100,6 +100,7 @@ return outputRenderer.Render(os.Stdout, view)
 `View` is a sealed interface. The package defines the supported view types in `model.go`:
 
 - `ListView`
+- `TreeView`
 - `ShowView`
 - `ShowCollectionView`
 - `SearchView`
@@ -124,7 +125,7 @@ The command layer constructs these views from knowledge-layer objects. Views sho
 | `markdown.go` | Markdown serialization |
 | `agent.go` | Compact agent catalog serialization |
 
-Each renderer uses a type switch over the supported `View` types. The `agent` renderer intentionally supports `ListView` only; unsupported view types return an error instead of producing partial output.
+Each renderer uses a type switch over the supported `View` types. The `agent` renderer intentionally supports `ListView` and `TreeView` only; unsupported view types return an error instead of producing partial output.
 
 ## Current output rules
 
@@ -206,7 +207,7 @@ Agent output is a purpose-built machine-readable list contract. It is supported 
 }
 ```
 
-It omits filesystem roots, duplicate file paths, concept bodies, relationships, actions, and usage hints. Other commands intentionally do not receive invented `agent` representations.
+It omits filesystem roots, duplicate file paths, concept bodies, relationships, actions, and usage hints. For `TreeView` it emits the same nested node payload as JSON with the filesystem `root` omitted. Other commands intentionally do not receive invented `agent` representations.
 
 ### Markdown
 

@@ -16,6 +16,8 @@ func (jsonRenderer) Render(w io.Writer, view View) error {
 	switch value := view.(type) {
 	case ListView:
 		return renderJSONList(w, value)
+	case TreeView:
+		return writeJSON(w, value)
 	case ShowView:
 		return writeJSON(w, value)
 	case ShowCollectionView:

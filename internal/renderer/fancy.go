@@ -18,6 +18,8 @@ func (fancyRenderer) Render(w io.Writer, view View) error {
 	switch value := view.(type) {
 	case ListView:
 		return renderFancyList(w, value)
+	case TreeView:
+		return renderFancyTree(w, value)
 	case ShowView:
 		return renderFancyShow(w, value)
 	case ShowCollectionView:
@@ -69,6 +71,64 @@ func renderFancyList(w io.Writer, view ListView) error {
 		fmt.Fprintf(w, "Root: %s\n", view.Root)
 	}
 	return nil
+}
+
+func renderFancyTree(w io.Writer, view TreeView) error {
+	if view.Heading != "" {
+		fmt.Fprintf(w, "%s  %d concepts\n\n", view.Heading, view.ConceptCount)
+	}
+	if description := strings.TrimSpace(view.Description); description != "" {
+		fmt.Fprintf(w, "%s\n\n", description)
+	}
+	if view.Path != "" {
+		fmt.Fprintf(w, "%s\n\n", view.Path)
+	}
+	writeFancyTreeNodes(w, view.Nodes, "")
+	if !view.HideUsage {
+		fmt.Fprintf(w, "Expand: manly tree %s --depth %d\n", view.Path, view.Depth)
+	}
+	if view.Root != "" {
+		fmt.Fprintf(w, "Root: %s\n", view.Root)
+	}
+	return nil
+}
+
+func writeFancyTreeNodes(w io.Writer, nodes []TreeNode, prefix string) {
+	for index, node := range nodes {
+		last := index == len(nodes)-1
+		connector := "|-- "
+		childPrefix := prefix + "|   "
+		if last {
+			connector = "`-- "
+			childPrefix = prefix + "    "
+		}
+		fmt.Fprintf(w, "%s%s%s\n", prefix, connector, fancyTreeLabel(node))
+		if description := strings.TrimSpace(node.Description); description != "" {
+			fmt.Fprintf(w, "%s    %s\n", childPrefix, description)
+		}
+		if node.Hidden != nil {
+			fmt.Fprintf(w, "%s`-- %s\n", childPrefix, hiddenText(node.Hidden))
+		}
+		writeFancyTreeNodes(w, node.Children, childPrefix)
+	}
+}
+
+func fancyTreeLabel(node TreeNode) string {
+	label := node.Path
+	if node.Kind == "directory" {
+		label += "/"
+	}
+	parts := []string{label}
+	if node.Title != "" {
+		parts = append(parts, node.Title)
+	}
+	if node.Type != "" {
+		parts = append(parts, "("+node.Type+")")
+	}
+	if node.Kind == "directory" {
+		parts = append(parts, fmt.Sprintf("%d concepts", node.ConceptCount))
+	}
+	return strings.Join(parts, "  ")
 }
 
 func renderFancyShowCollection(w io.Writer, view ShowCollectionView) error {

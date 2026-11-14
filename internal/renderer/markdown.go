@@ -19,6 +19,8 @@ func (markdownRenderer) Render(w io.Writer, view View) error {
 	switch value := view.(type) {
 	case ListView:
 		return renderMarkdownList(w, value)
+	case TreeView:
+		return renderMarkdownTree(w, value)
 	case ShowView:
 		return renderMarkdownShow(w, value)
 	case ShowCollectionView:
@@ -70,6 +72,52 @@ func renderMarkdownList(w io.Writer, view ListView) error {
 		fmt.Fprintf(w, "\n**Root:** %s\n", view.Root)
 	}
 	return nil
+}
+
+func renderMarkdownTree(w io.Writer, view TreeView) error {
+	if view.Heading != "" {
+		fmt.Fprintf(w, "# %s\n\n", view.Heading)
+		if description := strings.TrimSpace(view.Description); description != "" {
+			fmt.Fprintf(w, "%s\n\n", description)
+		}
+	}
+	writeMarkdownTreeNodes(w, view.Nodes, 0)
+	if view.Root != "" {
+		fmt.Fprintf(w, "\n**Root:** %s\n", view.Root)
+	}
+	return nil
+}
+
+func writeMarkdownTreeNodes(w io.Writer, nodes []TreeNode, depth int) {
+	indent := strings.Repeat("  ", depth)
+	for _, node := range nodes {
+		title := node.Title
+		if title == "" {
+			title = filepath.Base(node.Path)
+		}
+		link := node.Path
+		label := title
+		if node.Kind == "directory" {
+			link += "/"
+		} else {
+			link += ".md"
+		}
+		fmt.Fprintf(w, "%s* [%s](%s)", indent, label, link)
+		if node.Kind == "directory" {
+			fmt.Fprintf(w, " (%d concepts)", node.ConceptCount)
+		}
+		if node.Type != "" {
+			fmt.Fprintf(w, " - %s", node.Type)
+		}
+		if description := strings.TrimSpace(node.Description); description != "" {
+			fmt.Fprintf(w, " - %s", description)
+		}
+		fmt.Fprintln(w)
+		if node.Hidden != nil {
+			fmt.Fprintf(w, "%s  * %s\n", indent, hiddenText(node.Hidden))
+		}
+		writeMarkdownTreeNodes(w, node.Children, depth+1)
+	}
 }
 
 func renderMarkdownShow(w io.Writer, view ShowView) error {
