@@ -220,6 +220,7 @@ A root that is itself a bundle continues to use local IDs such as `/programming/
 |---------|-------------|
 | `init` | Initialize an OKF bundle |
 | `list` | List directories or concepts |
+| `tree` | Show a hierarchical tree of directories and concepts |
 | `show` | Show concepts or recursively load a concept directory |
 | `search` | Search concepts |
 | `context` | Retrieve bounded agent context |
@@ -234,7 +235,7 @@ A root that is itself a bundle continues to use local IDs such as `/programming/
 | `check` | Validate the bundle |
 | `version` | Print the manly executable version |
 
-All read commands, including `analytics`, support `--format compact|fancy|json|markdown` (default: `compact`, configurable). `list` additionally supports the machine-oriented `--format agent` catalog output. `list` also supports `--recursive`, `--no-recursive`, and bounded recursion with `--level N` (one-based; requires `--recursive`).
+All read commands, including `analytics`, support `--format compact|fancy|json|markdown` (default: `compact`, configurable). `list` and `tree` additionally support the machine-oriented `--format agent` catalog output. `list` also supports `--recursive`, `--no-recursive`, and bounded recursion with `--level N` (one-based; requires `--recursive`). `tree` supports `--depth N` (default: `2`, at least `1`) and shows bundle, directory, and concept descriptions with hints for content hidden below the depth frontier; `list --recursive` remains the flat, exhaustive view.
 
 ### Analytics
 
@@ -255,7 +256,10 @@ Use the catalog before loading concept bodies:
 Agent task
     |
     v
-manly list --format agent
+manly tree --format agent
+    |
+    v
+manly tree /relevant/path --depth 2 --format agent
     |
     v
 manly list /relevant/path --recursive --level 2 --format agent
