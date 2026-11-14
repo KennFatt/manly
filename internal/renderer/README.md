@@ -172,6 +172,18 @@ authoring/preferences         related topic
 
 Other compact outputs remain line-oriented, such as graph and check.
 
+Compact tree output shows paths and counts only, without titles or descriptions, and keeps the frontier hint for content hidden below the depth limit:
+
+```text
+Knowledge Workspace  106 concepts
+/
+
+├── /engineering-preferences/  63 concepts
+│   ├── /engineering-preferences/architecture/  (... 6 concepts below)
+```
+
+Use `--format fancy`, `--format markdown`, or `--format json` to see titles and descriptions.
+
 ### Fancy
 
 Fancy output keeps headings, descriptions, numbered links, backlinks, and navigation actions such as:

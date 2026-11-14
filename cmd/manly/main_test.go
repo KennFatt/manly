@@ -301,9 +301,13 @@ func TestCLITreeCommand(t *testing.T) {
 	writeCLIFile(t, root, "general/nested/deep.md", "---\ntype: Note\ntitle: Deep\n---\n")
 	writeCLIFile(t, root, "root-note.md", "---\ntype: Note\ntitle: Root Note\n---\n")
 
-	assertCommandContains(t, root, []string{"tree"}, "Test Bundle", "Test bundle description.", "/general/", "General description.", "2 concepts", "/root-note")
+	assertCommandContains(t, root, []string{"tree"}, "Test Bundle", "/general/", "2 concepts", "/root-note")
+	output, err := runCommand(t, root, "tree")
+	if err != nil || strings.Contains(output, "Test bundle description.") || strings.Contains(output, "General description.") || strings.Contains(output, "Use clear names.") {
+		t.Fatalf("compact tree should omit descriptions = %q, %v", output, err)
+	}
 	assertCommandContains(t, root, []string{"tree", "--depth", "1"}, "/general/", "concepts below", "Expand: manly tree / --depth 1")
-	output, err := runCommand(t, root, "tree", "--depth", "1")
+	output, err = runCommand(t, root, "tree", "--depth", "1")
 	if err != nil || strings.Contains(output, "/general/naming") || strings.Contains(output, "nested") {
 		t.Fatalf("depth one tree = %q, %v", output, err)
 	}
@@ -340,9 +344,13 @@ func TestCLITreeWorkspace(t *testing.T) {
 	writeCLIFile(t, root, "bundle-b/index.md", "---\nokf_version: \"0.1\"\ntype: Bundle\ntitle: Bundle B\n---\n")
 	writeCLIFile(t, root, "bundle-b/note.md", "---\ntype: Note\ntitle: Note\n---\n")
 
-	assertCommandContains(t, root, []string{"tree"}, "Knowledge Workspace", "Workspace description.", "/bundle-a/", "Bundle A description.", "/bundle-b/")
+	assertCommandContains(t, root, []string{"tree"}, "Knowledge Workspace", "/bundle-a/", "/bundle-b/")
+	output, err := runCommand(t, root, "tree")
+	if err != nil || strings.Contains(output, "Workspace description.") || strings.Contains(output, "Bundle A description.") || strings.Contains(output, "Use clear names.") {
+		t.Fatalf("compact workspace tree should omit descriptions = %q, %v", output, err)
+	}
 	assertCommandContains(t, root, []string{"tree", "--depth", "1"}, "below")
-	output, err := runCommand(t, root, "tree", "/bundle-a")
+	output, err = runCommand(t, root, "tree", "/bundle-a")
 	if err != nil || !strings.Contains(output, "/bundle-a/general/") || !strings.Contains(output, "/bundle-a/general/naming") {
 		t.Fatalf("workspace bundle tree = %q, %v", output, err)
 	}
